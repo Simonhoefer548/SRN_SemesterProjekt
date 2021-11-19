@@ -16,13 +16,16 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class Kommandozeile {
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args)
+			throws IOException, InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException,
+			InvalidAlgorithmParameterException, BadPaddingException, IllegalBlockSizeException {
 		System.out.println("Optionen");
 		System.out.println("1: Erstelle User / 2: Login ");
 
@@ -36,13 +39,14 @@ public class Kommandozeile {
 		} else {
 			System.out.println("Ung�ltige Eingabe!" + "\n" + "Bitte w�hlen Sie einge g�ltige Option");
 		}
+		System.out.println(selected.getFullJSON());
 		showAvailableFiles();
 		// Nun haben wir einen Container selektiert
 		System.out.println("Optionen");
 		System.out.println("1.Add File / 2. Open File / 3.Delete File / 4. File Share / 5. Exit ");
 		Scanner opt = new Scanner(System.in);
 		number = opt.nextInt();
-		boolean weiter= true;
+		boolean weiter = true;
 		while (weiter) {
 			switch (number) {
 			case 1: {
@@ -68,7 +72,7 @@ public class Kommandozeile {
 			}
 			case 5: {
 				System.out.println("Goodbye");
-				weiter=false;
+				weiter = false;
 			}
 			default:
 				System.out.println("Ung�ltige Eingabe!" + "\n" + "Bitte w�hlen Sie einge g�ltige Option");
@@ -78,19 +82,19 @@ public class Kommandozeile {
 
 	}
 
-	private static Container login() throws IOException {
+	private static Container login()
+			throws IOException, InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException,
+			InvalidAlgorithmParameterException, BadPaddingException, IllegalBlockSizeException {
 		System.out.println("Name?");
 		Scanner userName = new Scanner(System.in);
 		String user = userName.nextLine();
-		System.out.println("Pw?");
-		Scanner pw = new Scanner(System.in);
-		String password = userName.nextLine();
+		Container c1 = null;
 
 		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
 		JSONObject settingJSON = new JSONObject(settingFile);
 		JSONArray ja = new JSONArray(settingJSON.get("users").toString());
 
-		if (!(ja.toString().contains(user ))) {
+		if (!(ja.toString().contains(user))) {
 			System.out.println("User nicht vorhanden ");
 		} else {
 			String selectedUser = "";
@@ -98,22 +102,33 @@ public class Kommandozeile {
 			for (int i = 0; i < ja.length(); i++) {
 				selectedUser = ja.getJSONObject(i).toString();
 				String newString = selectedUser.replace("{", "").replace("}", "").replaceAll("\"", "");
-				System.out.println(newString);
 				String[] splittedSettings = newString.split(":");
-				if(user.equals(splittedSettings[0])) {
+				if (user.equals(splittedSettings[0])) {
 					selectedUser = splittedSettings[0];
 					containerName = splittedSettings[1];
 					break;
 				}
-				
+
 			}
 			String container = new String(Files.readAllBytes(Paths.get(containerName)), StandardCharsets.UTF_8);
 			JSONObject containerJSON = new JSONObject(container);
-			System.out.println(containerJSON);
+			String secret = containerJSON.get("secret").toString();
+			System.out.println(secret);
+			System.out.println("Pw?");
+			Scanner pw = new Scanner(System.in);
+			String password = userName.nextLine();
+			SecretKey aesKey = new SecretKeySpec(password.getBytes(), "AES");
+			String jsonString = AES_Encryption.decrypt(secret, aesKey);
+			System.out.println(jsonString);
+			// newContainer.put("secret", containerJSON.get("open"));
+			JSONObject secretJSON = new JSONObject(jsonString);
+			JSONObject pubJSON = new JSONObject(containerJSON.get("open").toString());
 		
+			c1 = new Container(secretJSON, pubJSON, user);
+
 		}
 
-		return null;
+		return c1;
 	}
 
 	private static void fileShare(Container selected) {
@@ -189,8 +204,8 @@ public class Kommandozeile {
 		File inputFile = Paths.get(filepath).toFile();
 		File encryptedFile = new File(filepath + "Encrypted");
 		try {
-			//AES_Encryption.decryptFile(symKey, inputFile, encryptedFile);
-			AES_Encryption.encryptFile(symKey, inputFile,encryptedFile);
+			// AES_Encryption.decryptFile(symKey, inputFile, encryptedFile);
+			AES_Encryption.encryptFile(symKey, inputFile, encryptedFile);
 		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
 				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
 				| IOException e) {
@@ -214,7 +229,7 @@ public class Kommandozeile {
 		System.out.println("Name?");
 		Scanner userName = new Scanner(System.in);
 		String user = userName.nextLine();
-		//TODO pw auf L�nge pr�fen und gegebenfalls auf 16 Stellen erweitern
+		// TODO pw auf L�nge pr�fen und gegebenfalls auf 16 Stellen erweitern
 		System.out.println("Pw?: (Genau 16 Zeichen!)");
 		Scanner pw = new Scanner(System.in);
 		String password = userName.nextLine();
@@ -229,8 +244,7 @@ public class Kommandozeile {
 		} else {
 			userJSON.append("users", new JSONObject().put(user, containerName));
 			writeFile(userJSON);
-			selected = new Container(containerName,user,password);
-
+			selected = new Container(containerName, user, password);
 
 		}
 

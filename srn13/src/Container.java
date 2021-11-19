@@ -29,6 +29,15 @@ public class Container {
 		this.owner=own;
 	}
 
+	public Container(JSONObject secret,JSONObject pub, String user) {
+		this.fullJSON = new JSONObject();
+		fullJSON.put("open", pub);
+		fullJSON.put("secret", secret);
+		this.privJSON=secret;
+		this.pubJSON=pub;
+		this.owner=user;
+		
+	}
 	private void createContainer(String container,String password) throws IOException {
 		
 		this.fullJSON = new JSONObject();
@@ -117,6 +126,10 @@ public class Container {
 
 	public String getOwner() {
 		return owner;
+	}
+	
+	public Container setContainer() {
+		return null;
 	}
 	
 	
