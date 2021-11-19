@@ -36,7 +36,7 @@ public class Kommandozeile {
 		} else if (number == 2) {
 			// Login
 		} else {
-			System.out.println("Zu Dumm fÃ¼r die Anwendung");
+			System.out.println("Ungültige Eingabe!"+"\n"+"Bitte wählen Sie einge gültige Option");
 		}
 		showAvailableFiles();
 		// Nun haben wir einen Container selektiert
@@ -72,7 +72,7 @@ public class Kommandozeile {
 				;
 			}
 			default:
-				System.out.println("Gib gescheite Zahl");
+				System.out.println("Ungültige Eingabe!"+"\n"+"Bitte wählen Sie einge gültige Option");
 				;
 			}
 		}
