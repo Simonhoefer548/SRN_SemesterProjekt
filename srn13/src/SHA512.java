@@ -35,11 +35,11 @@ public class SHA512 {
 	    public static void main(String[] args) throws NoSuchAlgorithmException {
 
 	        // same salt should be passed
-	        //Test für Salt von String zu ByteArray und wieder zu String
+	        //Test fï¿½r Salt von String zu ByteArray und wieder zu String
 	    	String name="testSalttoString";
 			byte[] salt=name.getBytes();
-			String wiederzürück=new String(salt);
-	    	System.out.println(name +"\n"+wiederzürück);
+			String back=new String(salt);
+	    	System.out.println(name +"\n"+back);
 	    	
 //	        String password1 = getSecurePassword("Password", salt);
 //	        String password2 = getSecurePassword("Password", salt);

@@ -58,7 +58,7 @@ public class Container {
 		//TODO PasswortverschlÃ¼sselung des privJSON -> done!
 		
 		
-		//TODO für jedes PW ein eigenes Salt
+		//TODO fï¿½r jedes PW ein eigenes Salt
 		
 		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
         JSONObject settingJSON = new JSONObject(settingFile);
@@ -66,9 +66,9 @@ public class Container {
 		
 		//String saltString="testSalttoString";
 		byte[] saltAsByteArray=salt.getBytes();
-		// ToString des privaten Json Objektes mittels SHA512 und noch FEST definierten Salt verschlüsselt
-		String zuVerschlüsselenMitSha512=SHA512.encryptString(this.privJSON.toString(), saltAsByteArray);
-		System.out.println(zuVerschlüsselenMitSha512);
+		// ToString des privaten Json Objektes mittels SHA512 und noch FEST definierten Salt verschlï¿½sselt
+		String MitSha512=SHA512.encryptString(this.privJSON.toString(), saltAsByteArray);
+		System.out.println(MitSha512);
 		
 		
 		
@@ -77,7 +77,7 @@ public class Container {
 		export.put("secret", this.privJSON);
 		fw.write(export.toString());
 		fw.close();
-		System.out.println("Verändert");
+		System.out.println("Verï¿½ndert");
 /*
  * 
 		encrypted_private = crypto.encrypt_bytes(self.aes_key, private_contents.encode(), public_contents.encode())
