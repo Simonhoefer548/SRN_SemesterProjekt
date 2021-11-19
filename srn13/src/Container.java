@@ -9,6 +9,7 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Scanner;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -16,6 +17,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 //SchlÃ¼sselbund
@@ -25,10 +27,12 @@ public class Container {
 	private JSONObject privJSON;
 	private JSONObject pubJSON;
 	private String owner;
+	private String name;
 	
 	Container(String containername,String own,String password) throws IOException{
 		this.createContainer(containername,password);	
 		this.owner=own;
+		this.name=containername;
 	}
 
 	public Container(JSONObject secret,JSONObject pub, String user) {
@@ -66,13 +70,16 @@ public class Container {
 		ju.put("publickey",Base64.getEncoder().encodeToString(publicAndPrivateKey.getPublic().getEncoded()));
 		js.put("privatekey",Base64.getEncoder().encodeToString(publicAndPrivateKey.getPrivate().getEncoded()));
 		
-		//js.put("privkey",privkey)
+		// Shared Keys sind Keys welche man von anderen Nutzern erhalten hat
 		//js.put("sharedKey",privkey)
-		//js.put("files",null)
+		
+		//Filekeys sind eigen erstelle symmetrische Keys zum entschlüssen einer Datei
+		js.put("filekeys","{}");
+		
 		//js.put("integritylist",null)
-		//js.put("fileKeyMappingList",null)
-		privJSON=js;
-		pubJSON=ju;
+		js.put("fileKeyMappingList","{}");
+		this.privJSON=js;
+		this.pubJSON=ju;
 		this.fullJSON.put("open", ju);
 		this.fullJSON.put("secret", js);
 		
@@ -115,13 +122,43 @@ public class Container {
 		export.put("secret", jsonPrivate);
 		fw.write(export.toString());
 		fw.close();
-		System.out.println("Verschlsselt");
+		System.out.println("Verschluesselt");
 /*
  * 
 		encrypted_private = crypto.encrypt_bytes(self.aes_key, private_contents.encode(), public_contents.encode())
 
 
  */
+	}
+	
+	public void addFileKey(SecretKey symKey,String filename) {
+		//TODO Key als String in Json abspeichern
+		//FileKeyMappingList erweitern 
+		//filename & keyname & creator
+		String keyforjson=Base64.getEncoder().encodeToString(symKey.getEncoded());
+		
+		JSONObject privjson=this.getPrivJSON();
+		JSONObject filekeystosave=(JSONObject) privjson.get("filekeys");
+		filekeystosave.append("key", keyforjson);
+		this.privJSON.remove("filekeys");
+		this.privJSON.put("filekeys", filekeystosave);
+		
+		JSONObject pub2=new JSONObject();
+		pub2.put("open", this.getPubJSON());
+		pub2.put("secret",filekeystosave);
+		this.fullJSON=pub2;
+		Scanner in =new Scanner(System.in);
+		System.out.println("Bitte Passwort eingeben");
+		String pw=in.nextLine(); 
+		
+		//TODO Passwort überprüfen
+		try {
+			this.saveContainer(this.name,pw);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 	public JSONObject getFullJSON() {

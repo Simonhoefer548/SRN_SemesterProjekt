@@ -177,7 +177,7 @@ public class Kommandozeile {
 	}
 
 	private static void addFile(Container container) {
-		System.out.println("Wie soll die Datei heiï¿½en?");
+		System.out.println("Wie soll die Datei heißen?");
 		Scanner sc = new Scanner(System.in);
 		String filename = sc.nextLine();
 		System.out.println("Pfad zur Datei");
@@ -195,16 +195,19 @@ public class Kommandozeile {
 
 			// TODO Symmetischer Key muss gespeichert werden
 			symKey = AES_Encryption.generateKey(256);
-
+			container.addFileKey(symKey,filename);
+		
 		} catch (NoSuchAlgorithmException e) {
 			System.err.print(e.getMessage());
 			e.printStackTrace();
 		}
 
 		File inputFile = Paths.get(filepath).toFile();
-		File encryptedFile = new File(filepath + "Encrypted");
+		//TODO realtiver Pfad
+		String pfadzumspeichern="files/"+filename;
+		File encryptedFile = new File(pfadzumspeichern);
 		try {
-			// AES_Encryption.decryptFile(symKey, inputFile, encryptedFile);
+			
 			AES_Encryption.encryptFile(symKey, inputFile, encryptedFile);
 		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
 				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
