@@ -82,21 +82,21 @@ public class RSA_Encryption {
 
 
 	public static void main(String[] args) throws IllegalBlockSizeException, InvalidKeyException, NoSuchPaddingException, BadPaddingException {
-		try {
-
-
-			SecretKey key=AES_Encryption.generateKey(256);
-
-
-
+//		try {
+//
+//
+//			//SecretKey key=AES_Encryption.generateKey(256);
+//
+//
+//
 //			byte[] symKey= encrypt(key, publicKey);
 //
-//			SecretKey finalKey= (SecretKey) RSA_Encryption.decrypt(symKey, privateKey);
+//		SecretKey finalKey= (SecretKey) RSA_Encryption.decrypt(symKey, privateKey);
 //			System.out.println("Sind die Schlüssel gleich: "+Arrays.equals(key.getEncoded(), finalKey.getEncoded()));
-
-		} catch (NoSuchAlgorithmException e) {
-			System.err.println(e.getMessage());
-		}
+//
+//		} catch (NoSuchAlgorithmException e) {
+//			System.err.println(e.getMessage());
+//		}
 
 	}
 }

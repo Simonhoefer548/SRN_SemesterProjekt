@@ -1,9 +1,12 @@
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Base64;
 
+import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 public class SHA512 {
@@ -43,15 +46,24 @@ public class SHA512 {
 //			byte[] salt=name.getBytes();
 //			String wiederzürück=new String(salt);
 //	    	System.out.println(name +"\n"+wiederzürück);
-	    	String key = "Bar12345Bar12345";
+//	    	String key = "Bar12345Bar12345";
+//	    	
+//	    	Key aesKey = new SecretKeySpec(key.getBytes(), "AES");
+//	    	Key aesKey2 = new SecretKeySpec(key.getBytes(), "AES");
+//	    	
+//	    	if(aesKey.equals(aesKey2)) {
+//	    		System.out.println("geht das?");
+//	    	}
 	    	
-	    	Key aesKey = new SecretKeySpec(key.getBytes(), "AES");
-	    	Key aesKey2 = new SecretKeySpec(key.getBytes(), "AES");
+	    	KeyPair pair=RSA_Encryption.KeyGenerator();
+	    	String encodedKey =Base64.getEncoder().encodeToString(pair.getPublic().getEncoded());
+	    	System.out.println(encodedKey);
 	    	
-	    	if(aesKey.equals(aesKey2)) {
-	    		System.out.println("geht das?");
+	    	byte[]decodedKey = Base64.getDecoder().decode(encodedKey);
+	    	SecretKey originalKey =new SecretKeySpec(decodedKey,0,decodedKey.length,"RSA");
+	    	if(pair.getPublic().equals(originalKey)) {
+	    		System.out.println("geht so");
 	    	}
-	    	
 //	        String password1 = getSecurePassword("Password", salt);
 //	        String password2 = getSecurePassword("Password", salt);
 //	        System.out.println(" Password 1 -> " + password1);

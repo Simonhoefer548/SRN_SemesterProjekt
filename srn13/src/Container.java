@@ -8,6 +8,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -57,8 +58,13 @@ public class Container {
 		JSONObject js = new JSONObject();
 		//TODO User spezifische Public & Private Keys in Json speichern
 		KeyPair publicAndPrivateKey=RSA_Encryption.KeyGenerator();
-		js.put("publickey",publicAndPrivateKey.getPublic());
-		js.put("privatekey",publicAndPrivateKey.getPrivate());
+		
+		
+		
+		
+		
+		ju.put("publickey",Base64.getEncoder().encodeToString(publicAndPrivateKey.getPublic().getEncoded()));
+		js.put("privatekey",Base64.getEncoder().encodeToString(publicAndPrivateKey.getPrivate().getEncoded()));
 		
 		//js.put("privkey",privkey)
 		//js.put("sharedKey",privkey)
