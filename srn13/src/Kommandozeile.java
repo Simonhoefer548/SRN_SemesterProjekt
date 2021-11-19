@@ -42,7 +42,8 @@ public class Kommandozeile {
 		System.out.println("1.Add File / 2. Open File / 3.Delete File / 4. File Share / 5. Exit ");
 		Scanner opt = new Scanner(System.in);
 		number = opt.nextInt();
-		while (true) {
+		boolean weiter= true;
+		while (weiter) {
 			switch (number) {
 			case 1: {
 				// File verschlüsseln
@@ -67,7 +68,7 @@ public class Kommandozeile {
 			}
 			case 5: {
 				System.out.println("Goodbye");
-				break ;
+				weiter=false;
 			}
 			default:
 				System.out.println("Ung�ltige Eingabe!" + "\n" + "Bitte w�hlen Sie einge g�ltige Option");
