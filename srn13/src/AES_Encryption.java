@@ -24,7 +24,47 @@ import java.util.Base64;
 
 public class AES_Encryption {
 
-   
+	/**
+	 * @param input
+	 * @param key
+	 * @return
+	 * @throws NoSuchPaddingException
+	 * @throws NoSuchAlgorithmException
+	 * @throws InvalidAlgorithmParameterException
+	 * @throws InvalidKeyException
+	 * @throws BadPaddingException
+	 * @throws IllegalBlockSizeException
+	 */
+	public static String encrypt(String input, SecretKey key)
+	        throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+	        InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+	        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+	        cipher.init(Cipher.ENCRYPT_MODE, key);
+	        byte[] cipherText = cipher.doFinal(input.getBytes());
+	        return Base64.getEncoder()
+	            .encodeToString(cipherText);
+	    }
+	
+	 /**
+	 * @param cipherText
+	 * @param key
+	 * @return
+	 * @throws NoSuchPaddingException
+	 * @throws NoSuchAlgorithmException
+	 * @throws InvalidAlgorithmParameterException
+	 * @throws InvalidKeyException
+	 * @throws BadPaddingException
+	 * @throws IllegalBlockSizeException
+	 */
+	public static String decrypt(String cipherText, SecretKey key)
+		        throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+		        InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+		        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+		        cipher.init(Cipher.DECRYPT_MODE, key);
+		        byte[] plainText = cipher.doFinal(Base64.getDecoder()
+		            .decode(cipherText));
+		        return new String(plainText);
+		    }
 
     
 
