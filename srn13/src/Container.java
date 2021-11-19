@@ -3,6 +3,16 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.json.JSONObject;
 
@@ -13,12 +23,13 @@ public class Container {
 	private JSONObject privJSON;
 	private JSONObject pubJSON;
 	private String owner;
-	Container(String containername,String own) throws IOException{
-		this.createContainer(containername);	
+	
+	Container(String containername,String own,String password) throws IOException{
+		this.createContainer(containername,password);	
 		this.owner=own;
 	}
 
-	private void createContainer(String container) throws IOException {
+	private void createContainer(String container,String password) throws IOException {
 		
 		this.fullJSON = new JSONObject();
 		this.privJSON = new JSONObject();
@@ -44,7 +55,7 @@ public class Container {
 		this.fullJSON.put("open", ju);
 		this.fullJSON.put("secret", js);
 		
-		saveContainer(container);
+		saveContainer(container,password);
 		
 	}
 	public Container getContainer() {
@@ -52,32 +63,38 @@ public class Container {
 		return this;
 	}
 	
-	private void saveContainer(String containername) throws IOException {
+	private void saveContainer(String containername,String password) throws IOException {
 	
 		FileWriter fw = new FileWriter(containername);
 		//TODO PasswortverschlÃ¼sselung des privJSON -> done!
 		
 		
-		//TODO für jedes PW ein eigenes Salt
+		
 		
 		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
         JSONObject settingJSON = new JSONObject(settingFile);
-        String salt = settingJSON.get("appsalt").toString(); 
-		
-		//String saltString="testSalttoString";
-		byte[] saltAsByteArray=salt.getBytes();
-		// ToString des privaten Json Objektes mittels SHA512 und noch FEST definierten Salt verschlüsselt
-		String zuVerschlüsselenMitSha512=SHA512.encryptString(this.privJSON.toString(), saltAsByteArray);
-		System.out.println(zuVerschlüsselenMitSha512);
+        
+        //TODO PW muss noch hier andocken
+        String keyGeneretedWithPassword=password;
+        SecretKey aesKey = new SecretKeySpec(keyGeneretedWithPassword.getBytes(), "AES");
+        String jsonPrivate="";
+        try {
+			jsonPrivate=AES_Encryption.encrypt(this.privJSON.toString(), aesKey);
+		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
+				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException e) {
+			System.err.print(e.getMessage());
+			e.printStackTrace();
+		}
+        
 		
 		
 		
 		JSONObject export = new JSONObject();
 		export.put("open", this.pubJSON);
-		export.put("secret", this.privJSON);
+		export.put("secret", jsonPrivate);
 		fw.write(export.toString());
 		fw.close();
-		System.out.println("Verändert");
+		System.out.println("Verschlüsselt");
 /*
  * 
 		encrypted_private = crypto.encrypt_bytes(self.aes_key, private_contents.encode(), public_contents.encode())

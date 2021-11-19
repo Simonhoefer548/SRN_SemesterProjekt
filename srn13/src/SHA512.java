@@ -1,7 +1,10 @@
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+
+import javax.crypto.spec.SecretKeySpec;
 
 public class SHA512 {
 	 
@@ -36,10 +39,18 @@ public class SHA512 {
 
 	        // same salt should be passed
 	        //Test für Salt von String zu ByteArray und wieder zu String
-	    	String name="testSalttoString";
-			byte[] salt=name.getBytes();
-			String wiederzürück=new String(salt);
-	    	System.out.println(name +"\n"+wiederzürück);
+//	    	String name="testSalttoString";
+//			byte[] salt=name.getBytes();
+//			String wiederzürück=new String(salt);
+//	    	System.out.println(name +"\n"+wiederzürück);
+	    	String key = "Bar12345Bar12345";
+	    	
+	    	Key aesKey = new SecretKeySpec(key.getBytes(), "AES");
+	    	Key aesKey2 = new SecretKeySpec(key.getBytes(), "AES");
+	    	
+	    	if(aesKey.equals(aesKey2)) {
+	    		System.out.println("geht das?");
+	    	}
 	    	
 //	        String password1 = getSecurePassword("Password", salt);
 //	        String password2 = getSecurePassword("Password", salt);

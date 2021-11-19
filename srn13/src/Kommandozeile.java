@@ -68,8 +68,8 @@ public class Kommandozeile {
 				;
 			}
 			case 5: {
-
-				;
+				System.out.println("Goodbye");
+				break ;
 			}
 			default:
 				System.out.println("Ungültige Eingabe!"+"\n"+"Bitte wählen Sie einge gültige Option");
@@ -155,7 +155,7 @@ public class Kommandozeile {
 		File inputFile = Paths.get(filepath).toFile();
 		File encryptedFile = new File(filepath+"Encrypted");
 		try {
-			AES_Encryption.decryptFile(symKey, inputFile,encryptedFile);
+			AES_Encryption.encryptFile(symKey, inputFile,encryptedFile);
 		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
 				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
 				| IOException e) {
@@ -180,7 +180,8 @@ public class Kommandozeile {
 		System.out.println("Name?");
 		Scanner userName = new Scanner(System.in);
 		String user = userName.nextLine();
-		System.out.println("Pw?");
+		//TODO pw auf Länge prüfen und gegebenfalls auf 16 Stellen erweitern
+		System.out.println("Pw?: (Genau 16 Zeichen!)");
 		Scanner pw = new Scanner(System.in);
 		String password = userName.nextLine();
 		String settings = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
@@ -195,7 +196,7 @@ public class Kommandozeile {
 			userJSON.append("users", new JSONObject().put(user, containerName));
 			writeFile(userJSON);
 
-			selected = new Container(containerName,user);
+			selected = new Container(containerName,user,password);
 
 		}
 
