@@ -101,8 +101,8 @@ public class Kommandozeile {
 				System.out.println(newString);
 				String[] splittedSettings = newString.split(":");
 				if(user.equals(splittedSettings[0])) {
-					selectedUser = splittedSettings[i];
-					containerName = splittedSettings[i];
+					selectedUser = splittedSettings[0];
+					containerName = splittedSettings[1];
 					break;
 				}
 				
