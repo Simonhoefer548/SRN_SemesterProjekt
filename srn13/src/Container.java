@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.BadPaddingException;
@@ -54,6 +55,11 @@ public class Container {
 		
 		//geheime Infos
 		JSONObject js = new JSONObject();
+		//TODO User spezifische Public & Private Keys in Json speichern
+		KeyPair publicAndPrivateKey=RSA_Encryption.KeyGenerator();
+		js.put("publickey",publicAndPrivateKey.getPublic());
+		js.put("privatekey",publicAndPrivateKey.getPrivate());
+		
 		//js.put("privkey",privkey)
 		//js.put("sharedKey",privkey)
 		//js.put("files",null)
