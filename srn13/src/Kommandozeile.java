@@ -51,14 +51,14 @@ public class Kommandozeile {
 			case 1: {
 				// File verschluesseln
 				addFile(selected);
-				number=5;
+				number = 5;
 				break;
 			}
 			case 2: {
 				openFile(selected);
-				number=5;
+				number = 5;
 				break;
-				
+
 			}
 			case 3: {
 				deleteFile(selected);
@@ -146,11 +146,33 @@ public class Kommandozeile {
 		// Key austausch
 	}
 
-	private static void deleteFile(Container selected) {
-		// TODO Auto-generated method stub
-		// showOwnfile();
-		// waehle file aus
-		// loesche keys und file
+	private static void deleteFile(Container selected) throws IOException {
+		JSONArray ja = (JSONArray) selected.getPubJSON().get("fileKeyMappingList");
+		for (int i = 0; i < ja.length(); i++) {
+
+			String file = ja.get(i).toString().split(":")[0];
+			String creator = ja.get(i).toString().split(":")[2];
+			if (selected.getOwner().equals(creator)) {
+				System.out.println(i + 1 + ":" + file);
+			}
+			// System.out.println(i+1+":"+ja.get(i));
+		}
+		System.out.println("Welches Files? Gib Name an");
+		Scanner so = new Scanner(System.in);
+		String filename = so.nextLine();
+		// key löschen
+		selected.deletekeys(filename);
+		File file = new File("filesencrypt/" + filename);
+
+		if (file.delete()) {
+			System.out.println("File deleted successfully");
+		} else {
+			System.out.println("Failed to delete the file");
+		}
+		
+		
+		//sendbulktoother
+
 
 	}
 
@@ -170,14 +192,11 @@ public class Kommandozeile {
 		System.out.println("Welches Files? Gib Name an");
 		Scanner so = new Scanner(System.in);
 		String filename = so.nextLine();
-		SecretKey symkey = selected.getKeyFromName( filename);
-		
-		
+		SecretKey symkey = selected.getKeyFromName(filename);
 
-		File inputFile = new File("filesencrypt/"+filename);
-		
-		File decFile = new File("filesdec/"+filename);
-		
+		File inputFile = new File("filesencrypt/" + filename);
+
+		File decFile = new File("filesdec/" + filename);
 
 		try {
 			AES_Encryption.decryptFile(symkey, inputFile, decFile);
@@ -217,11 +236,9 @@ public class Kommandozeile {
 			System.err.print(e.getMessage());
 			e.printStackTrace();
 		}
-		
 
-		File inputFile = new File("filesupload/"+filepath);
-		File encryptedFile = new File("filesencrypt/"+filename);
-		
+		File inputFile = new File("filesupload/" + filepath);
+		File encryptedFile = new File("filesencrypt/" + filename);
 
 		// File inputFile = Paths.get(filepath).toFile();
 		// System.out.println(inputFile);

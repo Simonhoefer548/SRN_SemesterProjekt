@@ -54,8 +54,7 @@ public class Container {
 		// öffentliche Infos
 		JSONObject ju = new JSONObject();
 		ju.put("containername", container);
-		// Fileliste
-		// TODO Erzeugung von öffentlichen /Private Keysd
+		ju.put("bulk", "[]");
 
 		// geheime Infos
 		JSONObject js = new JSONObject();
@@ -70,7 +69,7 @@ public class Container {
 
 		// Filekeys sind eigen erstelle symmetrische Keys zum entschl�ssen einer Datei
 		js.put("filekeys", "[]");
-
+		js.put("sharekeys", "[]");
 		// js.put("integritylist",null)
 		ju.put("fileKeyMappingList", "[]");
 		this.privJSON = js;
@@ -89,8 +88,9 @@ public class Container {
 
 	private void saveContainer(String containername, String password) throws IOException {
 
+		//wennFile vorhanden
+		
 		FileWriter fw = new FileWriter(containername);
-		// TODO Passwortverschlüsselung des privJSON -> done!
 
 		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
 		JSONObject settingJSON = new JSONObject(settingFile);
@@ -107,10 +107,14 @@ public class Container {
 			e.printStackTrace();
 		}
 
-		JSONObject export = new JSONObject();
-		export.put("open", this.pubJSON);
-		export.put("secret", jsonPrivate);
-		fw.write(export.toString());
+		System.out.println(this.pubJSON);
+		
+		JSONObject newObj = new JSONObject();
+		newObj.put("open", this.pubJSON);
+		System.out.println(newObj.toString());
+		newObj.put("secret", jsonPrivate);
+		System.out.println(newObj.toString());
+		fw.write(newObj.toString());
 		fw.close();
 		System.out.println("Verschluesselt");
 		/*
@@ -189,7 +193,7 @@ public class Container {
 
 	public SecretKey getKeyFromName(String filename) {
 		String keyname = "";
-		String key="";
+		String key = "";
 		JSONObject secret = (JSONObject) this.fullJSON.get("secret");
 		JSONArray ja = (JSONArray) this.getPubJSON().get("fileKeyMappingList");
 		// ja = new JSONArray(fileKeymap);
@@ -206,21 +210,84 @@ public class Container {
 				break;
 			}
 		}
-		//hole key mithilfe keyname aus secret
+		// hole key mithilfe keyname aus secret
 		JSONArray keyarray = new JSONArray();
-		keyarray= (JSONArray) secret.get("filekeys");
-		
+		keyarray = (JSONArray) secret.get("filekeys");
+
 		for (int i = 0; i < keyarray.length(); i++) {
 			JSONObject obj = (JSONObject) keyarray.get(i);
-			if(obj.get("keyName").equals(keyname)) {
-				key= obj.getString("key");
+			if (obj.get("keyName").equals(keyname)) {
+				key = obj.getString("key");
 			}
 		}
-		//		String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
+		// String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
 		byte[] decodedKey = Base64.getDecoder().decode(key);
 		// rebuild key using SecretKeySpec
-		SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES"); 
+		SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
 		return originalKey;
+
+	}
+
+	public void deletekeys(String filename) throws IOException {
+		// filekeymap
+		JSONObject tmp = this.getPubJSON();
+		JSONArray ja = (JSONArray) this.getPubJSON().get("fileKeyMappingList");
+		JSONArray newJA = new JSONArray();
+		String keyName="";
+
+		for (int i = 0; i < ja.length(); i++) {
+			String filekeymap = ja.get(i).toString();
+			String actFilename = filekeymap.split(":")[0];
+			if (actFilename.equals(filename)) {
+				keyName = filekeymap.split(":")[1];
+
+			} else {
+				newJA.put(filekeymap);
+			}
+
+		}
+		System.out.println(this.getPubJSON());
+
+		this.getPubJSON().remove("fileKeyMappingList");
+		System.out.println(this.getPubJSON());
+		this.getPubJSON().put("fileKeyMappingList", newJA);
+		System.out.println(this.getPubJSON());
+		
+		
+			// key aus fileskeys
+
+		String filekeystosave = this.getPrivJSON().get("filekeys").toString();
+		JSONArray fka = new JSONArray(filekeystosave);
+		//alle fileskeys sind in fka
+		JSONArray newJAfka = new JSONArray();
+		
+		for (int i = 0; i < fka.length(); i++) {
+			//befülle newJAfka mit werten außer das zu löschende 
+			JSONObject keyFile = (JSONObject) fka.get(i);
+			String keyname= keyFile.get("keyName").toString();
+			if(keyname.equals(keyName)) {
+				
+			}else {
+				newJAfka.put(keyFile);
+			}
+			
+		}
+		System.out.println(this.getPrivJSON());
+		this.getPrivJSON().remove("filekeys");
+		System.out.println(this.getPrivJSON());
+		
+		this.getPrivJSON().put("filekeys", newJAfka);
+		System.out.println(this.getPrivJSON());
+
+		JSONObject pub2 = new JSONObject();
+		pub2.put("open", this.getPubJSON());
+		pub2.put("secret", this.getPrivJSON());
+		System.out.println(this.getPrivJSON());
+		this.fullJSON = pub2;
+		Scanner in = new Scanner(System.in);
+		System.out.println("Bitte Passwort eingeben");
+		String pw = in.nextLine();
+		this.saveContainer(this.name, pw);
 
 	}
 
