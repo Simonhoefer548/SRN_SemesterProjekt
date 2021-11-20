@@ -27,7 +27,7 @@ public class AES_Encryption {
 	public static String extendGivenPassword(String givenPassword) {
 		int neededLength=16;
 		int charsToExtend=neededLength-givenPassword.length();
-		System.out.println("Um wie viele Stellen muss erweitert werden "+charsToExtend);
+		//System.out.println("Um wie viele Stellen muss erweitert werden "+charsToExtend);
 		String extendedPassword=givenPassword;
 		for(int i=0;i<charsToExtend;i++) {
 			extendedPassword+="0";

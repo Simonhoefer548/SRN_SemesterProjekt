@@ -55,22 +55,21 @@ public class SHA512 {
 //	    		System.out.println("geht das?");
 //	    	}
 	    	
-	    	KeyPair pair=RSA_Encryption.KeyGenerator();
-	    	String encodedKey =Base64.getEncoder().encodeToString(pair.getPublic().getEncoded());
-	    	System.out.println(encodedKey);
+//	    	KeyPair pair=RSA_Encryption.KeyGenerator();
+//	    	String encodedKey =Base64.getEncoder().encodeToString(pair.getPublic().getEncoded());
+//	    	System.out.println(encodedKey);
+//	    	
+//	    	byte[]decodedKey = Base64.getDecoder().decode(encodedKey);
+//	    	SecretKey originalKey =new SecretKeySpec(decodedKey,0,decodedKey.length,"RSA");
+//	    	if(pair.getPublic().equals(originalKey)) {
+//	    		System.out.println("geht so");
 	    	
-	    	byte[]decodedKey = Base64.getDecoder().decode(encodedKey);
-	    	SecretKey originalKey =new SecretKeySpec(decodedKey,0,decodedKey.length,"RSA");
-	    	if(pair.getPublic().equals(originalKey)) {
-	    		System.out.println("geht so");
-	    	}
-//	        String password1 = getSecurePassword("Password", salt);
-//	        String password2 = getSecurePassword("Password", salt);
-//	        System.out.println(" Password 1 -> " + password1);
-//	        System.out.println(" Password 2 -> " + password2);
-//	        if (password1.equals(password2)) {
-//	            System.out.println("passwords are equal");
-	        //}
+	    	String pw="WeroWeroWeroWero";
+	    	System.out.println(pw.length());
+	    	String test=AES_Encryption.extendGivenPassword(pw);
+	    	System.out.println(test+" "+test.length());
+	    	
+
 	    }
 	}
 
