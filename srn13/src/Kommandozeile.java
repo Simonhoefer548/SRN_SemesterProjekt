@@ -39,7 +39,6 @@ public class Kommandozeile {
 		} else {
 			System.out.println("Ung�ltige Eingabe!" + "\n" + "Bitte w�hlen Sie einge g�ltige Option");
 		}
-		System.out.println(selected.getFullJSON());
 		showAvailableFiles();
 		// Nun haben wir einen Container selektiert
 		System.out.println("Optionen");
@@ -113,13 +112,12 @@ public class Kommandozeile {
 			String container = new String(Files.readAllBytes(Paths.get(containerName)), StandardCharsets.UTF_8);
 			JSONObject containerJSON = new JSONObject(container);
 			String secret = containerJSON.get("secret").toString();
-			System.out.println(secret);
+
 			System.out.println("Pw?");
 			Scanner pw = new Scanner(System.in);
 			String password = userName.nextLine();
 			SecretKey aesKey = new SecretKeySpec(password.getBytes(), "AES");
 			String jsonString = AES_Encryption.decrypt(secret, aesKey);
-			System.out.println(jsonString);
 			// newContainer.put("secret", containerJSON.get("open"));
 			JSONObject secretJSON = new JSONObject(jsonString);
 			JSONObject pubJSON = new JSONObject(containerJSON.get("open").toString());
@@ -176,7 +174,7 @@ public class Kommandozeile {
 
 	}
 
-	private static void addFile(Container container) {
+	private static void addFile(Container container) throws IOException {
 		System.out.println("Wie soll die Datei hei�en?");
 		Scanner sc = new Scanner(System.in);
 		String filename = sc.nextLine();
@@ -186,6 +184,7 @@ public class Kommandozeile {
 		JSONObject file = new JSONObject();
 
 		FileInfo fi = new FileInfo(filename, filepath, container.getOwner());
+	
 		// Datei wird verschlüsselt mit einem sym Key
 		// Dieser Key wird dann in den Container verschlüsselt gespeichert
 		// container.setFileKey();
@@ -195,16 +194,20 @@ public class Kommandozeile {
 
 			// TODO Symmetischer Key muss gespeichert werden
 			symKey = AES_Encryption.generateKey(256);
-
+			System.out.println(symKey);
+			container.addFileKey(symKey,filename);
+		
 		} catch (NoSuchAlgorithmException e) {
 			System.err.print(e.getMessage());
 			e.printStackTrace();
 		}
 
 		File inputFile = Paths.get(filepath).toFile();
-		File encryptedFile = new File(filepath + "Encrypted");
+		//TODO realtiver Pfad
+		String pfadzumspeichern="files/"+filename;
+		File encryptedFile = new File(pfadzumspeichern);
 		try {
-			// AES_Encryption.decryptFile(symKey, inputFile, encryptedFile);
+			
 			AES_Encryption.encryptFile(symKey, inputFile, encryptedFile);
 		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
 				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
