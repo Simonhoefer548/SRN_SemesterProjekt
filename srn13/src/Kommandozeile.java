@@ -122,7 +122,7 @@ public class Kommandozeile {
 
 			System.out.println(secret);
 
-			String finalPassword = validatePassword();
+			String finalPassword =AES_Encryption.validatePassword();
 			// Hier m�sste �berprueft werden ob das PW zum User passt oder statt die
 			// Exception zu werfen abfangen und wieder zur Eingabe zur�ck springen
 
@@ -272,7 +272,7 @@ public class Kommandozeile {
 		System.out.println("Bitte Username eingeben");
 		Scanner sc = new Scanner(System.in);
 		String user = sc.nextLine();
-		String finalPassword = validatePassword();
+		String finalPassword = AES_Encryption.validatePassword();
 		String settings = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
 		JSONObject userJSON = new JSONObject(settings);
 		JSONArray ja = (JSONArray) userJSON.get("users");
@@ -300,23 +300,5 @@ public class Kommandozeile {
 		System.out.println("Veraendert");
 	}
 
-	private static String validatePassword() {
-		Scanner sc = new Scanner(System.in);
-		String inputPW = "";
-		String finalPW = "";
-		/*
-		 * do {
-		 * System.out.println("Bitte Passwort eingeben"+"\n"+"(Zwischen 1-16 Zeichen)");
-		 * inputPW=sc.nextLine(); if(inputPW.length()>0 || inputPW.length() >16) {
-		 * finalPW=AES_Encryption.extendGivenPassword(inputPW); }
-		 * 
-		 * }while(inputPW.length()==0 || inputPW.length() >=16);
-		 * 
-		 */
-		// TODO syos wieder entfernen, nur zum testen
-		System.out.println("Dein gespeichertes Passwort lautet: " + finalPW + "\n"
-				+ "(Kann auf 16 Stellen erweitert worden sein!)" + System.lineSeparator());
-		return sc.nextLine();
-
-	}
+	
 }

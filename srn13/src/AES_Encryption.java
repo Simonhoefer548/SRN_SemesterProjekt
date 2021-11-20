@@ -21,8 +21,30 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Base64;
+import java.util.Scanner;
 
 public class AES_Encryption {
+	
+	public static String validatePassword() {
+		Scanner sc = new Scanner(System.in);
+		String inputPW = "";
+		String finalPW = "";
+		
+		  do {
+		  System.out.println("Bitte Passwort eingeben"+"\n"+"(Zwischen 1-16 Zeichen)");
+		  inputPW=sc.nextLine(); if(inputPW.length()>0 || inputPW.length() >16) {
+		  finalPW=AES_Encryption.extendGivenPassword(inputPW); }
+		  
+		  }while(inputPW.length()==0 || inputPW.length() >=16);
+		  
+		 
+		// TODO syos wieder entfernen, nur zum testen
+		System.out.println("Dein gespeichertes Passwort lautet: " + finalPW + "\n"
+				+ "(Kann auf 16 Stellen erweitert worden sein!)" + System.lineSeparator());
+		return finalPW;
+
+	}
+	
 
 	public static String extendGivenPassword(String givenPassword) {
 		int neededLength=16;

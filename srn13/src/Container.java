@@ -165,8 +165,10 @@ public class Container {
 		this.fullJSON = pub2;
 		System.out.println(this.fullJSON);
 		Scanner in = new Scanner(System.in);
-		System.out.println("Bitte Passwort eingeben");
-		String pw = in.nextLine();
+		//System.out.println("Bitte Passwort eingeben");
+		String pw =AES_Encryption.validatePassword(); 
+				//in.nextLine();
+		
 		this.saveContainer(this.name, pw);
 
 	}
@@ -284,9 +286,10 @@ public class Container {
 		pub2.put("secret", this.getPrivJSON());
 		System.out.println(this.getPrivJSON());
 		this.fullJSON = pub2;
-		Scanner in = new Scanner(System.in);
-		System.out.println("Bitte Passwort eingeben");
-		String pw = in.nextLine();
+//		Scanner in = new Scanner(System.in);
+//		System.out.println("Bitte Passwort eingeben");
+		String pw =AES_Encryption.validatePassword(); 
+				//in.nextLine();
 		this.saveContainer(this.name, pw);
 
 	}
