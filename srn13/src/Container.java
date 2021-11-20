@@ -55,9 +55,7 @@ public class Container {
 		JSONObject ju = new JSONObject();
 		ju.put("containername", container);
 		// Fileliste
-		// ju.put("containername", container);
 		// TODO Erzeugung von öffentlichen /Private Keysd
-		// ju.put("pubkey", null);
 
 		// geheime Infos
 		JSONObject js = new JSONObject();
@@ -130,7 +128,7 @@ public class Container {
 		String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
 		String filekeystosave = this.getPrivJSON().get("filekeys").toString();
 		JSONArray ja = new JSONArray(filekeystosave);
-		String keyname = "key1:" + filename;
+		String keyname = "S-key1-" + filename;
 		JSONObject tmppriv = this.getPrivJSON();
 		JSONObject keyFile = new JSONObject();
 
@@ -141,17 +139,16 @@ public class Container {
 		ja.put(keyFile);
 		tmppriv.put("filekeys", ja);
 
-
 		this.privJSON = tmppriv;
-		//Mapping
-		
+		// Mapping
+
 		String filekeymapping = this.getPubJSON().get("fileKeyMappingList").toString();
 		System.out.println(filekeymapping);
 		JSONArray jaMap = new JSONArray(filekeymapping);
 
 		System.out.println(jaMap);
 		JSONObject tmppub = this.getPubJSON();
-		String autorkeyfile = filename + ":" + keyname + ":as" + this.owner;
+		String autorkeyfile = filename + ":" + keyname + ":" + this.owner;
 
 		jaMap.put(autorkeyfile);
 		tmppub.remove("fileKeyMappingList");
@@ -188,6 +185,43 @@ public class Container {
 
 	public Container setContainer() {
 		return null;
+	}
+
+	public SecretKey getKeyFromName(String filename) {
+		String keyname = "";
+		String key="";
+		JSONObject secret = (JSONObject) this.fullJSON.get("secret");
+		JSONArray ja = (JSONArray) this.getPubJSON().get("fileKeyMappingList");
+		// ja = new JSONArray(fileKeymap);
+
+		for (int i = 0; i < ja.length(); i++) {
+			String sel = ja.get(i).toString();
+			String[] array = sel.split(":");
+			String fileName = array[0];
+
+			if (filename.equals(fileName)) {
+				// richtiges File
+				keyname = array[1];
+				String creator = array[2];
+				break;
+			}
+		}
+		//hole key mithilfe keyname aus secret
+		JSONArray keyarray = new JSONArray();
+		keyarray= (JSONArray) secret.get("filekeys");
+		
+		for (int i = 0; i < keyarray.length(); i++) {
+			JSONObject obj = (JSONObject) keyarray.get(i);
+			if(obj.get("keyName").equals(keyname)) {
+				key= obj.getString("key");
+			}
+		}
+		//		String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
+		byte[] decodedKey = Base64.getDecoder().decode(key);
+		// rebuild key using SecretKeySpec
+		SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES"); 
+		return originalKey;
+
 	}
 
 }
