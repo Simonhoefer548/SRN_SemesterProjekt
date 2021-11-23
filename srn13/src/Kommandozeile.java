@@ -184,12 +184,13 @@ public class Kommandozeile {
 		System.out.println("Welche File soll geloescht werden?"+"\n"+"('exit' für verlassen)");
 		Scanner so = new Scanner(System.in);
 		String filename = so.nextLine();
+		boolean match=false;
 		// erneute Prüfung ob ich berechtigt bin diese Datei zu löschen 
 		for (int i = 0; i < ja.length(); i++) {
 			String file = ja.get(i).toString().split(":")[0];
 			if (file.equals(filename)) {
 				System.out.println("Hit");
-				
+				match=true;
 				
 				// key lÃ¶schen
 				selected.deletekeys(filename);
@@ -200,12 +201,12 @@ public class Kommandozeile {
 				} else {
 					System.out.println("Failed to delete the file");
 				}
-			}else {
-				System.out.println("Diese Datei können Sie nicht löschen!");
 			}
 
 		}
-
+		if(!match) {
+			System.out.println("Sie können diese Datei nicht löschen!");
+		}
 
 
 
@@ -283,7 +284,7 @@ public class Kommandozeile {
 
 			// TODO Symmetischer Key muss gespeichert werden
 			symKey = AES_Encryption.generateKey(256);
-			container.addFileKey(symKey, filename);
+			
 
 		} catch (NoSuchAlgorithmException e) {
 			System.err.print(e.getMessage());
@@ -306,10 +307,10 @@ public class Kommandozeile {
 				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
 				| IOException e) {
 			System.out.println("Datei konnte nicht gefunden werden!"+"\n"+"Bitte erneut eingeben");
-			container.deletekeys(filename);
-			addFile(container);
+			return;
+			
 		}
-
+		container.addFileKey(symKey, filename);
 
 
 	}
