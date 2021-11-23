@@ -90,7 +90,7 @@ public class Kommandozeile {
 			}
 		}
 		System.out.println("Goodbye");
-		System.exit(0);
+		
 
 	}
 
