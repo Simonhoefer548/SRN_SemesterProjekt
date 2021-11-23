@@ -96,6 +96,7 @@ public class Container {
 		JSONObject settingJSON = new JSONObject(settingFile);
 
 		// TODO PW muss noch hier andocken
+		//TODO Passwort Datei überprüfen 
 		String keyGeneretedWithPassword = password;
 		SecretKey aesKey = new SecretKeySpec(keyGeneretedWithPassword.getBytes(), "AES");
 		String jsonPrivate = "";
@@ -166,6 +167,8 @@ public class Container {
 		System.out.println(this.fullJSON);
 		Scanner in = new Scanner(System.in);
 		//System.out.println("Bitte Passwort eingeben");
+		
+		//TODO Hier würde das bereits existiernde Passwort überschrieben werden!
 		String pw =AES_Encryption.validatePassword(); 
 				//in.nextLine();
 		
@@ -288,6 +291,8 @@ public class Container {
 		this.fullJSON = pub2;
 //		Scanner in = new Scanner(System.in);
 //		System.out.println("Bitte Passwort eingeben");
+		
+		//TODO auch hier kann das existiernde Passwort überschrieben werden!
 		String pw =AES_Encryption.validatePassword(); 
 				//in.nextLine();
 		this.saveContainer(this.name, pw);
