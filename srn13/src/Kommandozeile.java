@@ -188,7 +188,7 @@ public class Kommandozeile {
 				JSONObject oldPrivJSON = selected.getPrivJSON();
 				oldPrivJSON.remove("sharekeys");
 				JSONObject jof = new JSONObject();
-				jof.put("keyName", filename + ":" + "SH-key1-" + filename + ":" + sender);
+				jof.put("keyName",  "SH-key1-" + filename );
 				jof.put("key", keey);
 				sharedKeysAsStringArray.put(jof);
 				oldPrivJSON.put("sharekeys", sharedKeysAsStringArray);
@@ -209,9 +209,9 @@ public class Kommandozeile {
 		}
 		// TODO Muss wieder einkommentiert werden
 
-//		selected.getPubJSON().remove("bulk");
-//		selected.getPubJSON().put("bulk", "[]");
-//		selected.resetBulk();
+		selected.getPubJSON().remove("bulk");
+		selected.getPubJSON().put("bulk", "[]");
+		selected.resetBulk();
 	}
 
 	private static void fileShare(Container selected) throws IOException, InvalidKeyException, BadPaddingException,

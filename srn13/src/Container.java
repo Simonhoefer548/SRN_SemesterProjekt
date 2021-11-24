@@ -187,7 +187,7 @@ public class Container {
 		for (int i = 0; i < keyarray.length(); i++) {
 			JSONObject obj = (JSONObject) keyarray.get(i);
 			System.out.println(obj);
-			String test2 = obj.get("keyName").toString().split(":")[1];
+			String test2 = obj.get("keyName").toString();
 			if (test2.equals(keyname)) {
 				key = obj.getString("key");
 			}
