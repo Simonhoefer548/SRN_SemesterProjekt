@@ -86,47 +86,6 @@ public class Container {
 		return this;
 	}
 
-	private void saveContainer(String containername, String password) throws IOException {
-
-		//wennFile vorhanden
-		
-		FileWriter fw = new FileWriter(containername);
-
-		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
-		JSONObject settingJSON = new JSONObject(settingFile);
-
-		// TODO PW muss noch hier andocken
-		//TODO Passwort Datei überprüfen 
-		String keyGeneretedWithPassword = password;
-		SecretKey aesKey = new SecretKeySpec(keyGeneretedWithPassword.getBytes(), "AES");
-		String jsonPrivate = "";
-		try {
-			jsonPrivate = AES_Encryption.encrypt(this.privJSON.toString(), aesKey);
-		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
-				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException e) {
-			System.err.print(e.getMessage());
-			e.printStackTrace();
-		}
-
-		System.out.println(this.pubJSON);
-		
-		JSONObject newObj = new JSONObject();
-		newObj.put("open", this.pubJSON);
-		System.out.println(newObj.toString());
-		newObj.put("secret", jsonPrivate);
-		System.out.println(newObj.toString());
-		fw.write(newObj.toString());
-		fw.close();
-		System.out.println("Verschluesselt");
-		/*
-		 * 
-		 * encrypted_private = crypto.encrypt_bytes(self.aes_key,
-		 * private_contents.encode(), public_contents.encode())
-		 * 
-		 * 
-		 */
-	}
-
 	public void addFileKey(SecretKey symKey, String filename) throws IOException {
 		// String in filekeys JSON
 		System.out.println(this.fullJSON);
@@ -166,12 +125,12 @@ public class Container {
 		this.fullJSON = pub2;
 		System.out.println(this.fullJSON);
 		Scanner in = new Scanner(System.in);
-		//System.out.println("Bitte Passwort eingeben");
-		
-		//TODO Hier würde das bereits existiernde Passwort überschrieben werden!
-		String pw =AES_Encryption.validatePassword(); 
-				//in.nextLine();
-		
+		// System.out.println("Bitte Passwort eingeben");
+
+		// TODO Hier wï¿½rde das bereits existiernde Passwort ï¿½berschrieben werden!
+		String pw = AES_Encryption.validatePassword();
+		// in.nextLine();
+
 		this.saveContainer(this.name, pw);
 
 	}
@@ -216,12 +175,20 @@ public class Container {
 			}
 		}
 		// hole key mithilfe keyname aus secret
-		JSONArray keyarray = new JSONArray();
-		keyarray = (JSONArray) secret.get("filekeys");
+		String filekeys = secret.get("filekeys").toString();
+		JSONArray keyarray = new JSONArray(filekeys);
 
+		String shareKeysString = secret.get("sharekeys").toString();
+		JSONArray share = new JSONArray(shareKeysString);
+		for (int i = 0; i < share.length(); i++) {
+			keyarray.put(share.get(i));
+		}
+		//"test1:SH-key1-test1:luca\""
 		for (int i = 0; i < keyarray.length(); i++) {
 			JSONObject obj = (JSONObject) keyarray.get(i);
-			if (obj.get("keyName").equals(keyname)) {
+			System.out.println(obj);
+			String test2 = obj.get("keyName").toString().split(":")[1];
+			if (test2.equals(keyname)) {
 				key = obj.getString("key");
 			}
 		}
@@ -238,7 +205,7 @@ public class Container {
 		JSONObject tmp = this.getPubJSON();
 		JSONArray ja = (JSONArray) this.getPubJSON().get("fileKeyMappingList");
 		JSONArray newJA = new JSONArray();
-		String keyName="";
+		String keyName = "";
 
 		for (int i = 0; i < ja.length(); i++) {
 			String filekeymap = ja.get(i).toString();
@@ -257,30 +224,29 @@ public class Container {
 		System.out.println(this.getPubJSON());
 		this.getPubJSON().put("fileKeyMappingList", newJA);
 		System.out.println(this.getPubJSON());
-		
-		
-			// key aus fileskeys
+
+		// key aus fileskeys
 
 		String filekeystosave = this.getPrivJSON().get("filekeys").toString();
 		JSONArray fka = new JSONArray(filekeystosave);
-		//alle fileskeys sind in fka
+		// alle fileskeys sind in fka
 		JSONArray newJAfka = new JSONArray();
-		
+
 		for (int i = 0; i < fka.length(); i++) {
-			//befÃ¼lle newJAfka mit werten auÃŸer das zu lÃ¶schende 
+			// befÃ¼lle newJAfka mit werten auÃŸer das zu lÃ¶schende
 			JSONObject keyFile = (JSONObject) fka.get(i);
-			String keyname= keyFile.get("keyName").toString();
-			if(keyname.equals(keyName)) {
-				
-			}else {
+			String keyname = keyFile.get("keyName").toString();
+			if (keyname.equals(keyName)) {
+
+			} else {
 				newJAfka.put(keyFile);
 			}
-			
+
 		}
 		System.out.println(this.getPrivJSON());
 		this.getPrivJSON().remove("filekeys");
 		System.out.println(this.getPrivJSON());
-		
+
 		this.getPrivJSON().put("filekeys", newJAfka);
 		System.out.println(this.getPrivJSON());
 
@@ -291,11 +257,100 @@ public class Container {
 		this.fullJSON = pub2;
 //		Scanner in = new Scanner(System.in);
 //		System.out.println("Bitte Passwort eingeben");
-		
-		//TODO auch hier kann das existiernde Passwort überschrieben werden!
-		String pw =AES_Encryption.validatePassword(); 
-				//in.nextLine();
+
+		// TODO auch hier kann das existiernde Passwort ï¿½berschrieben werden!
+		String pw = AES_Encryption.validatePassword();
+		// in.nextLine();
 		this.saveContainer(this.name, pw);
+
+	}
+
+	public void addBulk(JSONObject bulkObj, JSONObject containerJSON) throws IOException {
+		JSONObject pubFromContainer = containerJSON;
+		JSONObject open = (JSONObject) pubFromContainer.get("open");
+		String bulktoSave = open.get("bulk").toString();
+		JSONArray bulkja = new JSONArray(bulktoSave);
+		bulkja.put(bulkObj);
+		open.remove("bulk");
+		open.put("bulk", bulkja);
+		JSONObject jo = open;
+		pubFromContainer.remove("open");
+		pubFromContainer.put("open", jo);
+		System.out.println("Password");
+		this.saveContainerByOthers(open.get("containername").toString(), pubFromContainer);
+
+	}
+
+	private void saveContainerByOthers(String containername, JSONObject container) throws IOException {
+		System.out.println(container);
+		System.out.println(containername);
+		FileWriter fw = new FileWriter(containername);
+		fw.write(container.toString());
+		fw.close();
+		System.out.println("Gespeichert");
+
+	}
+
+	private void saveContainer(String containername, String password) throws IOException {
+
+		// wennFile vorhanden
+
+		FileWriter fw = new FileWriter(containername);
+
+		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
+		JSONObject settingJSON = new JSONObject(settingFile);
+
+		// TODO PW muss noch hier andocken
+		// TODO Passwort Datei ï¿½berprï¿½fen
+		String keyGeneretedWithPassword = password;
+		SecretKey aesKey = new SecretKeySpec(keyGeneretedWithPassword.getBytes(), "AES");
+		String jsonPrivate = "";
+		try {
+			jsonPrivate = AES_Encryption.encrypt(this.privJSON.toString(), aesKey);
+		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
+				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException e) {
+			System.err.print(e.getMessage());
+			e.printStackTrace();
+		}
+
+		System.out.println(this.pubJSON);
+
+		JSONObject newObj = new JSONObject();
+		newObj.put("open", this.pubJSON);
+		System.out.println(newObj.toString());
+		newObj.put("secret", jsonPrivate);
+		System.out.println(newObj.toString());
+		fw.write(newObj.toString());
+		fw.close();
+		System.out.println("Verschluesselt");
+		/*
+		 * 
+		 * encrypted_private = crypto.encrypt_bytes(self.aes_key,
+		 * private_contents.encode(), public_contents.encode())
+		 * 
+		 * 
+		 */
+	}
+
+	public void addShareKey(JSONObject oldPrivJSON, JSONObject oldPubJSON) throws IOException {
+		System.out.println(oldPrivJSON);
+		System.out.println(oldPubJSON);
+
+		this.privJSON = oldPrivJSON;
+		this.pubJSON = oldPubJSON;
+		JSONObject pub2 = new JSONObject();
+		pub2.put("open", this.getPubJSON());
+		pub2.put("secret", this.getPrivJSON());
+		System.out.println(this.getPrivJSON());
+		this.fullJSON = pub2;
+
+		saveContainer(this.name, AES_Encryption.validatePassword());
+
+	}
+
+	public void resetBulk() throws IOException {
+		String pw = AES_Encryption.validatePassword();
+		this.saveContainer(name, pw);
 
 	}
 
