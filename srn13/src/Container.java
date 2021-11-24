@@ -86,53 +86,55 @@ public class Container {
 		return this;
 	}
 
-	public void addFileKey(SecretKey symKey, String filename) throws IOException {
-		// String in filekeys JSON
-		System.out.println(this.fullJSON);
-		String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
-		String filekeystosave = this.getPrivJSON().get("filekeys").toString();
-		JSONArray ja = new JSONArray(filekeystosave);
-		String keyname = "S-key1-" + filename;
-		JSONObject tmppriv = this.getPrivJSON();
-		JSONObject keyFile = new JSONObject();
+	public boolean addFileKey(SecretKey symKey, String filename) throws IOException {
+		//Passwortabfrage
 
-		keyFile.put("keyName", keyname);
-		keyFile.put("key", keyforjson);
+		String pw =AES_Encryption.validatePassword(); 
+		if(!AES_Encryption.verifyPassword(pw)) {
+			return false;
+		}else {
+			// String in filekeys JSON
+			System.out.println(this.fullJSON);
+			String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
+			String filekeystosave = this.getPrivJSON().get("filekeys").toString();
+			JSONArray ja = new JSONArray(filekeystosave);
+			String keyname = "S-key1-" + filename;
+			JSONObject tmppriv = this.getPrivJSON();
+			JSONObject keyFile = new JSONObject();
 
-		tmppriv.remove("filekeys");
-		ja.put(keyFile);
-		tmppriv.put("filekeys", ja);
+			keyFile.put("keyName", keyname);
+			keyFile.put("key", keyforjson);
 
-		this.privJSON = tmppriv;
-		// Mapping
+			tmppriv.remove("filekeys");
+			ja.put(keyFile);
+			tmppriv.put("filekeys", ja);
 
-		String filekeymapping = this.getPubJSON().get("fileKeyMappingList").toString();
-		System.out.println(filekeymapping);
-		JSONArray jaMap = new JSONArray(filekeymapping);
+			this.privJSON = tmppriv;
+			// Mapping
 
-		System.out.println(jaMap);
-		JSONObject tmppub = this.getPubJSON();
-		String autorkeyfile = filename + ":" + keyname + ":" + this.owner;
+			String filekeymapping = this.getPubJSON().get("fileKeyMappingList").toString();
+			System.out.println(filekeymapping);
+			JSONArray jaMap = new JSONArray(filekeymapping);
 
-		jaMap.put(autorkeyfile);
-		tmppub.remove("fileKeyMappingList");
-		tmppub.put("fileKeyMappingList", jaMap);
+			System.out.println(jaMap);
+			JSONObject tmppub = this.getPubJSON();
+			String autorkeyfile = filename + ":" + keyname + ":" + this.owner;
 
-		this.pubJSON = tmppub;
-		JSONObject pub2 = new JSONObject();
-		pub2.put("open", this.getPubJSON());
-		pub2.put("secret", this.getPrivJSON());
-		this.fullJSON = pub2;
-		System.out.println(this.fullJSON);
-		Scanner in = new Scanner(System.in);
-		// System.out.println("Bitte Passwort eingeben");
+			jaMap.put(autorkeyfile);
+			tmppub.remove("fileKeyMappingList");
+			tmppub.put("fileKeyMappingList", jaMap);
 
-		// TODO Hier wï¿½rde das bereits existiernde Passwort ï¿½berschrieben werden!
-		String pw = AES_Encryption.validatePassword();
-		// in.nextLine();
+			this.pubJSON = tmppub;
+			JSONObject pub2 = new JSONObject();
+			pub2.put("open", this.getPubJSON());
+			pub2.put("secret", this.getPrivJSON());
+			this.fullJSON = pub2;
+			System.out.println(this.fullJSON);
 
-		this.saveContainer(this.name, pw);
 
+			this.saveContainer(this.name, pw);
+			return true;
+		}
 	}
 
 	public JSONObject getFullJSON() {
@@ -187,6 +189,7 @@ public class Container {
 		for (int i = 0; i < keyarray.length(); i++) {
 			JSONObject obj = (JSONObject) keyarray.get(i);
 			System.out.println(obj);
+			// Fehler ArrayOutOfBounds 1 wurde durch 0  bzw i ersetzt-> Hauptnutzer kann seine Datei wieder entschlüsseln aber der Zweitnutzer bekommt Exception
 			String test2 = obj.get("keyName").toString().split(":")[1];
 			if (test2.equals(keyname)) {
 				key = obj.getString("key");
@@ -200,7 +203,14 @@ public class Container {
 
 	}
 
-	public void deletekeys(String filename) throws IOException {
+	public boolean deletekeys(String filename) throws IOException {
+		//Passwortabfrage
+		//Passwort von Nutzer einlesen
+		String pw =AES_Encryption.validatePassword(); 
+		if(!AES_Encryption.verifyPassword(pw)) {
+			return false;
+		}
+
 		// filekeymap
 		JSONObject tmp = this.getPubJSON();
 		JSONArray ja = (JSONArray) this.getPubJSON().get("fileKeyMappingList");
@@ -255,15 +265,12 @@ public class Container {
 		pub2.put("secret", this.getPrivJSON());
 		System.out.println(this.getPrivJSON());
 		this.fullJSON = pub2;
-//		Scanner in = new Scanner(System.in);
-//		System.out.println("Bitte Passwort eingeben");
-
-		// TODO auch hier kann das existiernde Passwort ï¿½berschrieben werden!
-		String pw = AES_Encryption.validatePassword();
-		// in.nextLine();
+		
 		this.saveContainer(this.name, pw);
-
+		return true;
 	}
+
+
 
 	public void addBulk(JSONObject bulkObj, JSONObject containerJSON) throws IOException {
 		JSONObject pubFromContainer = containerJSON;
@@ -297,13 +304,12 @@ public class Container {
 
 		FileWriter fw = new FileWriter(containername);
 
-		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
-		JSONObject settingJSON = new JSONObject(settingFile);
+		//		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
+		//		JSONObject settingJSON = new JSONObject(settingFile);
 
 		// TODO PW muss noch hier andocken
 		// TODO Passwort Datei ï¿½berprï¿½fen
-		String keyGeneretedWithPassword = password;
-		SecretKey aesKey = new SecretKeySpec(keyGeneretedWithPassword.getBytes(), "AES");
+		SecretKey aesKey = new SecretKeySpec(password.getBytes(), "AES");
 		String jsonPrivate = "";
 		try {
 			jsonPrivate = AES_Encryption.encrypt(this.privJSON.toString(), aesKey);
