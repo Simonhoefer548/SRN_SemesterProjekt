@@ -80,6 +80,20 @@ public class RSA_Encryption {
 		return (SecretKey) cipher.unwrap(data, "AES", Cipher.SECRET_KEY);
 	}
 
+	public static byte[] encryptString(String data, String publicKey) throws BadPaddingException,
+			IllegalBlockSizeException, InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, getPublicKey(publicKey));
+		return cipher.doFinal(data.getBytes());
+	}
+
+	public static String decryptToString(byte[] data, String privateKey) throws NoSuchPaddingException,
+			NoSuchAlgorithmException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		cipher.init(Cipher.DECRYPT_MODE, getPrivateKey(privateKey));
+		return new String(cipher.doFinal(data));
+	}
+
 	public static void main(String[] args)
 			throws IllegalBlockSizeException, InvalidKeyException, NoSuchPaddingException, BadPaddingException {
 //		try {

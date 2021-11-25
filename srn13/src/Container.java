@@ -28,8 +28,11 @@ public class Container {
 	private JSONObject pubJSON;
 	private String owner;
 	private String name;
+	private static int CONTAINERCOUNT = 0;
 
-	Container(String containername, String own, String password) throws IOException {
+	Container(String containername, String own, String password)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		this.createContainer(containername, password);
 		this.owner = own;
 		this.name = containername;
@@ -45,7 +48,9 @@ public class Container {
 		this.name = pubJSON.getString("containername");
 	}
 
-	private void createContainer(String container, String password) throws IOException {
+	private void createContainer(String container, String password)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 
 		this.fullJSON = new JSONObject();
 		this.privJSON = new JSONObject();
@@ -71,7 +76,7 @@ public class Container {
 		js.put("filekeys", "[]");
 		js.put("sharekeys", "[]");
 		js.put("shareUserList", "[]");
-		// js.put("integritylist",null)
+		js.put("integritylist", "[]");
 		ju.put("fileKeyMappingList", "[]");
 		this.privJSON = js;
 		this.pubJSON = ju;
@@ -79,6 +84,50 @@ public class Container {
 		this.fullJSON.put("secret", js);
 
 		saveContainer(container, password);
+		Container.CONTAINERCOUNT++;
+		if (Container.CONTAINERCOUNT > 1) {
+			sendAllUserPubKey(Base64.getEncoder().encodeToString(publicAndPrivateKey.getPublic().getEncoded()));
+
+		}
+
+	}
+
+	private void sendAllUserPubKey(String pubkey)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+		// was brauche ich?
+		// pubkey aller User -> für jeden User machst du so
+		// pro User nehme sein pubKey verschlüssele mein pubkey und schreiben es in
+		// seinem bulk
+		// select pubkey
+		// nehme mein pubkey
+		// schreibe es ins bulk
+
+		String settings = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
+		JSONObject userJSON = new JSONObject(settings);
+		JSONArray ja = (JSONArray) userJSON.get("users");
+		if (ja.length() > 0) {
+			for (int i = 0; i < ja.length(); i++) {
+				System.out.println();
+				// [{"luca":"luca2021_11_24_9f26b74a9cf5682da25a8dee48dffaaa1a8a7e52dd25682b2cd87504c41edb4e2ec0004b6516b2e3a7f1fd349622ba5d4da48b2743b9901827ed0fcf4dd087d7"}
+				String user = ja.get(i).toString().split(":")[0].replaceAll("\"", "").replace("{", "");
+				String cname = ja.get(i).toString().split(":")[0].replaceAll("\"", "").replace("}", "");
+
+				String container = new String(Files.readAllBytes(Paths.get(cname)), StandardCharsets.UTF_8);
+				JSONObject containerJSON = new JSONObject(container);
+				JSONObject open = (JSONObject) containerJSON.get("open");
+
+				// pubkey des
+
+				JSONObject bulkObj = new JSONObject();
+				bulkObj.put("id", 4);
+				bulkObj.put("data", pubkey);
+				bulkObj.put("cname", cname);
+				bulkObj.put("user", user);
+				this.addBulk(bulkObj, containerJSON);
+
+			}
+		}
 
 	}
 
@@ -270,14 +319,38 @@ public class Container {
 		return true;
 	}
 
-	public void addBulk(JSONObject bulkObj, JSONObject containerJSON) throws IOException {
+	public void addBulk(JSONObject bulkObj, JSONObject containerJSON)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+		// [{1,2},{1,2},{1,2},{1,2}]
+		// hole complette JSOn /Cotainer
 		JSONObject pubFromContainer = containerJSON;
+		// hole open Bereich JSON
 		JSONObject open = (JSONObject) pubFromContainer.get("open");
+		// gib ganzen JSON aus
 		String bulktoSave = open.get("bulk").toString();
-		JSONArray bulkja = new JSONArray(bulktoSave);
-		bulkja.put(bulkObj);
+		// mach JSON zu JSONARRay []
+		JSONArray jaWithOtherBulks = new JSONArray(bulktoSave);
+		String pubkeyFromOther = open.get("publickey").toString();
+
+		// create sym key
+		SecretKey symKey = AES_Encryption.generateKey(256);
+
+		// Sym as String
+		String symKeyString = Base64.getEncoder().encodeToString(symKey.getEncoded());
+
+		String decrybulk = AES_Encryption.encrypt(bulkObj.toString(), symKey);
+
+		byte[] encrSymKey = RSA_Encryption.encryptString(symKeyString, pubkeyFromOther);
+
+		// Verschlüssele vollstädigen bulk mit sym key
+		JSONObject fullBulkobj = new JSONObject();
+		fullBulkobj.put("encsymkey", Base64.getEncoder().encodeToString(encrSymKey));
+		fullBulkobj.put("encr", decrybulk);
+
+		jaWithOtherBulks.put(fullBulkobj);
 		open.remove("bulk");
-		open.put("bulk", bulkja);
+		open.put("bulk", jaWithOtherBulks);
 		JSONObject jo = open;
 		pubFromContainer.remove("open");
 		pubFromContainer.put("open", jo);
@@ -386,7 +459,9 @@ public class Container {
 
 	}
 
-	public void addDeletedBulkForAll(String filename) throws IOException {
+	public void addDeletedBulkForAll(String filename)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 
 		String shareUserList = this.getPrivJSON().get("shareUserList").toString();
 		// [{"file":"test1","cname":"bera2021_11_24_4c307a812539d794d8178fa00f8c2133878f31a6db862fba21f5d385ed66bd36fcbea42055b4678fed344e2359135d6f4385eb69b5f490747e0a4b5c9860379d","user":"bera"},{"file":"test1","cname":"sandra2021_11_24_3fa2ec7d18891e93cd1ac5af528f129e9d5a0752213ea30aaafcb36d8bbc6ef7cba88077dfc7de9428d225733a891a465ca4b792d8200126b21fd11c76d6294c","user":"sandra"}]
@@ -394,11 +469,12 @@ public class Container {
 		for (int i = 0; i < jatmp.length(); i++) {
 			JSONObject jo = jatmp.getJSONObject(i);
 			if (filename.equals(jo.get("file").toString())) {
-				String container = new String(Files.readAllBytes(Paths.get(jo.get("cname").toString())), StandardCharsets.UTF_8);
+				String container = new String(Files.readAllBytes(Paths.get(jo.get("cname").toString())),
+						StandardCharsets.UTF_8);
 				JSONObject containerJSON = new JSONObject(container);
 				JSONObject bulkObj = new JSONObject();
 				bulkObj.put("id", 3);
-				bulkObj.put("data",filename );
+				bulkObj.put("data", filename);
 				bulkObj.put("cname", jo.get("cname"));
 				this.addBulk(bulkObj, containerJSON);
 
@@ -406,6 +482,17 @@ public class Container {
 
 		}
 
+	}
+
+	public void addInteger(JSONArray jainteglist) throws IOException {
+		this.getPrivJSON().remove("integritylist");
+		this.getPrivJSON().put("integritylist", jainteglist);
+		JSONObject pub2 = new JSONObject();
+		pub2.put("open", this.getPubJSON());
+		pub2.put("secret", this.getPrivJSON());
+		System.out.println(this.getPrivJSON());
+		this.fullJSON = pub2;
+		this.saveContainer(this.name, AES_Encryption.validatePassword());
 	}
 
 }

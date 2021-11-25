@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Scanner;
 
 import javax.crypto.BadPaddingException;
@@ -102,7 +103,8 @@ public class Kommandozeile {
 
 	}
 
-	private static void removeFileShare(Container selected) throws IOException {
+	private static void removeFileShare(Container selected) throws IOException, InvalidKeyException,
+			BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		System.out.println("Wer soll entfernt werden?(Nummer)");
 		String shareUserList = selected.getPrivJSON().get("shareUserList").toString();
 		JSONArray jatmp = new JSONArray(shareUserList);
@@ -126,8 +128,10 @@ public class Kommandozeile {
 			bulkObj.put("data", tmp.get("file"));
 			bulkObj.put("fileName", tmp.get("cname"));
 			bulkObj.put("sender", selected.getOwner());
-			String container = new String(Files.readAllBytes(Paths.get(tmp.get("cname").toString())), StandardCharsets.UTF_8);
+			String container = new String(Files.readAllBytes(Paths.get(tmp.get("cname").toString())),
+					StandardCharsets.UTF_8);
 			JSONObject containerJSON = new JSONObject(container);
+
 			selected.addBulk(bulkObj, containerJSON);
 
 		}
@@ -202,13 +206,54 @@ public class Kommandozeile {
 	}
 
 	private static void verarbeiteBulk(Container selected) throws InvalidKeyException, NoSuchPaddingException,
-			NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, IOException {
+			NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, IOException, InvalidAlgorithmParameterException {
 		// TODO Pr�fen ob Datei schon vorhanden ist
 
 		String test = selected.getPubJSON().get("bulk").toString();
-		JSONArray ja = new JSONArray(test);
+		String privasString = selected.getPrivJSON().get("privatekey").toString();
+		System.out.println(privasString);
+		
+		JSONArray ja = new JSONArray();
+		
+		JSONArray jatemp = new JSONArray(test);
+		for (int i = 0; i < jatemp.length(); i++) {
+			/*
+			 * 		encBulk.put("encr", decrybulk);
+		
+		encBulk.put("encsymkey", Base64.getEncoder().encodeToString(encrSymKey));
+			 */
+			System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++Entschlüsselung");
+			JSONObject jotmp = (JSONObject) jatemp.get(i);
+			String stringtoDecr = jotmp.get("encr").toString();
+			System.out.println("Verschlüsselter Bulk"+stringtoDecr);
+			String encSimKey = jotmp.get("encsymkey").toString();
+			System.out.println("Verschlüsselter Sym Key"+encSimKey);
+			String decryptSymKEy = RSA_Encryption.decryptToString(Base64.getDecoder().decode(encSimKey), privasString);
+			System.out.println("Entschlüsstler Sym KEy "+decryptSymKEy);
+			byte[] byteString = Base64.getDecoder().decode(stringtoDecr);
+			//datasym stringtoDecr
+			//decryptsym key 
+			byte[] decodedKey = Base64.getDecoder().decode(decryptSymKEy);
+			// rebuild key using SecretKeySpec
+			SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES"); 
+			String decData = AES_Encryption.decrypt(stringtoDecr,originalKey);
+			System.out.println(decData);
+			JSONObject jodec = new JSONObject(decData);
+			ja.put(jodec);
+
+		}
+
+
 		for (int i = 0; i < ja.length(); i++) {
+
+			// muss die verabtieung rein
 			JSONObject jo = (JSONObject) ja.get(i);
+
+			// RSA_Encryption.decryptString(originalKey,decodedString);
+			// hole meinen PrivateKey
+			// entschlüssel
+			// mach den String zu JSONObject jo
+
 			if (jo.get("id").toString().equals("1")) {
 				String filename = jo.get("fileName").toString();
 				String keyString = jo.get("data").toString();
@@ -217,7 +262,7 @@ public class Kommandozeile {
 				// aus Key String sym key entschlüsseln
 				// private Key holen
 				String privkey = selected.getPrivJSON().get("privatekey").toString();
-
+				System.out.println(privkey);
 				byte[] decodedKey = Base64.getDecoder().decode(keyString);
 
 				SecretKey symkey = RSA_Encryption.decrypt(decodedKey, privkey);
@@ -250,29 +295,27 @@ public class Kommandozeile {
 				oldPubJSON.put("fileKeyMappingList", fileyKeyListArray);
 				selected.addShareKey(oldPrivJSON, oldPubJSON);
 
-			}else if (jo.get("id").toString().equals("2")) {
-				//removeFIleShare
+			} else if (jo.get("id").toString().equals("2")) {
+				// removeFIleShare
 
-				//remove sharefiles in private
+				// remove sharefiles in private
 				JSONObject tmp = selected.getPrivJSON();
-				
+
 				String sharekeys = tmp.get("sharekeys").toString();
 				JSONArray sharekeyArry = new JSONArray(sharekeys);
 				JSONArray newArray = new JSONArray();
 				for (int j = 0; j < sharekeyArry.length(); j++) {
 					System.out.println(sharekeyArry);
 					String keyName = sharekeyArry.getJSONObject(i).get("keyName").toString().split("-")[2];
-					if(keyName.equals(jo.get("data"))) {
+					if (keyName.equals(jo.get("data"))) {
 						System.out.println("einmal muss es kommen");
-					}else {
+					} else {
 						newArray.put(jo);
-						
-						
+
 					}
 				}
-				
-				
-				//remove filekeyMappingList
+
+				// remove filekeyMappingList
 				JSONObject tmp2 = selected.getPubJSON();
 //				JSONObject bulkObj = new JSONObject();
 //				bulkObj.put("id", 2);
@@ -284,51 +327,68 @@ public class Kommandozeile {
 				JSONArray newMapArray = new JSONArray();
 				for (int j = 0; j < mapArray.length(); j++) {
 					String tmpString = mapArray.get(i).toString().split(":")[1].split("-")[1];
-					if(tmpString.equals(jo.get("data"))) {
-					
-					}else {
+					if (tmpString.equals(jo.get("data"))) {
+
+					} else {
 						newMapArray.put(mapArray.get(i));
 					}
 				}
-				selected.removeShare(newArray,newMapArray);
-			}else if (jo.get("id").toString().equals("3")) {
-				//removeFIleShare
+				selected.removeShare(newArray, newMapArray);
+			} else if (jo.get("id").toString().equals("3")) {
+				// removeFIleShare
 
-				//remove sharefiles in private
+				// remove sharefiles in private
 				JSONObject tmp = selected.getPrivJSON();
-				
+
 				String sharekeys = tmp.get("sharekeys").toString();
 				JSONArray sharekeyArry = new JSONArray(sharekeys);
 				JSONArray newArray = new JSONArray();
 				for (int j = 0; j < sharekeyArry.length(); j++) {
 					System.out.println(sharekeyArry);
 					String keyName = sharekeyArry.getJSONObject(i).get("keyName").toString().split("-")[2];
-					if(keyName.equals(jo.get("data"))) {
+					if (keyName.equals(jo.get("data"))) {
 						System.out.println("einmal muss es kommen");
-					}else {
+					} else {
 						newArray.put(jo);
-						
-						
+
 					}
 				}
-				
-				
-				//remove filekeyMappingList
+
+				// remove filekeyMappingList
 				JSONObject tmp2 = selected.getPubJSON();
 
 				String maplist = tmp2.get("fileKeyMappingList").toString();
 				JSONArray mapArray = new JSONArray(maplist);
 				JSONArray newMapArray = new JSONArray();
 				for (int j = 0; j < mapArray.length(); j++) {
-					
+
 					String tmpString = mapArray.get(i).toString().split(":")[0];
-					if(tmpString.equals(jo.get("data"))) {
-					
-					}else {
+					if (tmpString.equals(jo.get("data"))) {
+
+					} else {
 						newMapArray.put(mapArray.get(i));
 					}
 				}
-				selected.removeShare(newArray,newMapArray);
+				selected.removeShare(newArray, newMapArray);
+			} else if (jo.get("id").toString().equals("4")) {
+				/*
+				 * JSONObject bulkObj = new JSONObject(); bulkObj.put("id", 4);
+				 * bulkObj.put("data", pubkey); bulkObj.put("cname", cname);
+				 * this.addBulk(bulkObj, containerJSON);
+				 */
+				// hole aus integrityList raus
+				// füge ein Array hinzu
+				// speicher diese List
+				// save container
+				JSONObject jopriv = selected.getPrivJSON();
+				String integList = jopriv.getString("integritylist").toString();
+				JSONArray jainteglist = new JSONArray(integList);
+				JSONObject integinfo = new JSONObject();
+				integinfo.put("user", jo.get("user"));
+				integinfo.put("pubkey", jo.get("data"));
+				jainteglist.put(jainteglist);
+
+				selected.addInteger(jainteglist);
 			}
 		}
 
@@ -338,7 +398,7 @@ public class Kommandozeile {
 	}
 
 	private static void fileShare(Container selected) throws IOException, InvalidKeyException, BadPaddingException,
-			IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
+			IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		showOwnfile(selected);
 		System.out.println("Welche File soll geshared werden?" + "\n" + "('exit' f�r verlassen)");
 		Scanner so = new Scanner(System.in);
@@ -409,6 +469,7 @@ public class Kommandozeile {
 			JSONObject open = (JSONObject) containerJSON.get("open");
 
 			String pubkey = open.get("publickey").toString();
+		
 			// Symkey holen
 
 			JSONArray filekeymapping = (JSONArray) selected.getPubJSON().get("fileKeyMappingList");
@@ -457,7 +518,8 @@ public class Kommandozeile {
 		}
 	}
 
-	private static void deleteFile(Container selected) throws IOException {
+	private static void deleteFile(Container selected) throws IOException, InvalidKeyException, BadPaddingException,
+			IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		JSONArray ja = (JSONArray) selected.getPubJSON().get("fileKeyMappingList");
 		for (int i = 0; i < ja.length(); i++) {
 
@@ -649,7 +711,8 @@ public class Kommandozeile {
 		return true;
 	}
 
-	private static Container createUser() throws IOException {
+	private static Container createUser() throws IOException, InvalidKeyException, BadPaddingException,
+			IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		Container selected = null;
 		System.out.println("Erstelle User");
 		System.out.println("Bitte Username eingeben");
