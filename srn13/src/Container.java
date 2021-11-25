@@ -70,6 +70,7 @@ public class Container {
 		// Filekeys sind eigen erstelle symmetrische Keys zum entschl�ssen einer Datei
 		js.put("filekeys", "[]");
 		js.put("sharekeys", "[]");
+		js.put("shareUserList", "[]");
 		// js.put("integritylist",null)
 		ju.put("fileKeyMappingList", "[]");
 		this.privJSON = js;
@@ -86,53 +87,54 @@ public class Container {
 		return this;
 	}
 
-	public void addFileKey(SecretKey symKey, String filename) throws IOException {
-		// String in filekeys JSON
-		System.out.println(this.fullJSON);
-		String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
-		String filekeystosave = this.getPrivJSON().get("filekeys").toString();
-		JSONArray ja = new JSONArray(filekeystosave);
-		String keyname = "S-key1-" + filename;
-		JSONObject tmppriv = this.getPrivJSON();
-		JSONObject keyFile = new JSONObject();
+	public boolean addFileKey(SecretKey symKey, String filename) throws IOException {
+		// Passwortabfrage
 
-		keyFile.put("keyName", keyname);
-		keyFile.put("key", keyforjson);
-
-		tmppriv.remove("filekeys");
-		ja.put(keyFile);
-		tmppriv.put("filekeys", ja);
-
-		this.privJSON = tmppriv;
-		// Mapping
-
-		String filekeymapping = this.getPubJSON().get("fileKeyMappingList").toString();
-		System.out.println(filekeymapping);
-		JSONArray jaMap = new JSONArray(filekeymapping);
-
-		System.out.println(jaMap);
-		JSONObject tmppub = this.getPubJSON();
-		String autorkeyfile = filename + ":" + keyname + ":" + this.owner;
-
-		jaMap.put(autorkeyfile);
-		tmppub.remove("fileKeyMappingList");
-		tmppub.put("fileKeyMappingList", jaMap);
-
-		this.pubJSON = tmppub;
-		JSONObject pub2 = new JSONObject();
-		pub2.put("open", this.getPubJSON());
-		pub2.put("secret", this.getPrivJSON());
-		this.fullJSON = pub2;
-		System.out.println(this.fullJSON);
-		Scanner in = new Scanner(System.in);
-		// System.out.println("Bitte Passwort eingeben");
-
-		// TODO Hier w�rde das bereits existiernde Passwort �berschrieben werden!
 		String pw = AES_Encryption.validatePassword();
-		// in.nextLine();
+		if (!AES_Encryption.verifyPassword(pw)) {
+			return false;
+		} else {
+			// String in filekeys JSON
+			System.out.println(this.fullJSON);
+			String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
+			String filekeystosave = this.getPrivJSON().get("filekeys").toString();
+			JSONArray ja = new JSONArray(filekeystosave);
+			String keyname = "S-key1-" + filename;
+			JSONObject tmppriv = this.getPrivJSON();
+			JSONObject keyFile = new JSONObject();
 
-		this.saveContainer(this.name, pw);
+			keyFile.put("keyName", keyname);
+			keyFile.put("key", keyforjson);
 
+			tmppriv.remove("filekeys");
+			ja.put(keyFile);
+			tmppriv.put("filekeys", ja);
+
+			this.privJSON = tmppriv;
+			// Mapping
+
+			String filekeymapping = this.getPubJSON().get("fileKeyMappingList").toString();
+			System.out.println(filekeymapping);
+			JSONArray jaMap = new JSONArray(filekeymapping);
+
+			System.out.println(jaMap);
+			JSONObject tmppub = this.getPubJSON();
+			String autorkeyfile = filename + ":" + keyname + ":" + this.owner;
+
+			jaMap.put(autorkeyfile);
+			tmppub.remove("fileKeyMappingList");
+			tmppub.put("fileKeyMappingList", jaMap);
+
+			this.pubJSON = tmppub;
+			JSONObject pub2 = new JSONObject();
+			pub2.put("open", this.getPubJSON());
+			pub2.put("secret", this.getPrivJSON());
+			this.fullJSON = pub2;
+			System.out.println(this.fullJSON);
+
+			this.saveContainer(this.name, pw);
+			return true;
+		}
 	}
 
 	public JSONObject getFullJSON() {
@@ -183,11 +185,12 @@ public class Container {
 		for (int i = 0; i < share.length(); i++) {
 			keyarray.put(share.get(i));
 		}
-		//"test1:SH-key1-test1:luca\""
+		// "test1:SH-key1-test1:luca\""
 		for (int i = 0; i < keyarray.length(); i++) {
 			JSONObject obj = (JSONObject) keyarray.get(i);
 			System.out.println(obj);
 			String test2 = obj.get("keyName").toString();
+
 			if (test2.equals(keyname)) {
 				key = obj.getString("key");
 			}
@@ -200,7 +203,14 @@ public class Container {
 
 	}
 
-	public void deletekeys(String filename) throws IOException {
+	public boolean deletekeys(String filename) throws IOException {
+		// Passwortabfrage
+		// Passwort von Nutzer einlesen
+		String pw = AES_Encryption.validatePassword();
+		if (!AES_Encryption.verifyPassword(pw)) {
+			return false;
+		}
+
 		// filekeymap
 		JSONObject tmp = this.getPubJSON();
 		JSONArray ja = (JSONArray) this.getPubJSON().get("fileKeyMappingList");
@@ -255,14 +265,9 @@ public class Container {
 		pub2.put("secret", this.getPrivJSON());
 		System.out.println(this.getPrivJSON());
 		this.fullJSON = pub2;
-//		Scanner in = new Scanner(System.in);
-//		System.out.println("Bitte Passwort eingeben");
 
-		// TODO auch hier kann das existiernde Passwort �berschrieben werden!
-		String pw = AES_Encryption.validatePassword();
-		// in.nextLine();
 		this.saveContainer(this.name, pw);
-
+		return true;
 	}
 
 	public void addBulk(JSONObject bulkObj, JSONObject containerJSON) throws IOException {
@@ -276,7 +281,6 @@ public class Container {
 		JSONObject jo = open;
 		pubFromContainer.remove("open");
 		pubFromContainer.put("open", jo);
-		System.out.println("Password");
 		this.saveContainerByOthers(open.get("containername").toString(), pubFromContainer);
 
 	}
@@ -297,13 +301,14 @@ public class Container {
 
 		FileWriter fw = new FileWriter(containername);
 
-		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
-		JSONObject settingJSON = new JSONObject(settingFile);
+		// String settingFile = new
+		// String(Files.readAllBytes(Paths.get("settings.json")),
+		// StandardCharsets.UTF_8);
+		// JSONObject settingJSON = new JSONObject(settingFile);
 
 		// TODO PW muss noch hier andocken
 		// TODO Passwort Datei �berpr�fen
-		String keyGeneretedWithPassword = password;
-		SecretKey aesKey = new SecretKeySpec(keyGeneretedWithPassword.getBytes(), "AES");
+		SecretKey aesKey = new SecretKeySpec(password.getBytes(), "AES");
 		String jsonPrivate = "";
 		try {
 			jsonPrivate = AES_Encryption.encrypt(this.privJSON.toString(), aesKey);
@@ -351,6 +356,55 @@ public class Container {
 	public void resetBulk() throws IOException {
 		String pw = AES_Encryption.validatePassword();
 		this.saveContainer(name, pw);
+
+	}
+
+	public void addShareUserList(JSONArray jatmp) throws IOException {
+		JSONObject tmp = this.getPrivJSON();
+		tmp.remove("shareUserList");
+		tmp.put("shareUserList", jatmp);
+		this.privJSON = tmp;
+		JSONObject pub2 = new JSONObject();
+		pub2.put("open", this.getPubJSON());
+		pub2.put("secret", this.getPrivJSON());
+		System.out.println(this.getPrivJSON());
+		this.fullJSON = pub2;
+		this.saveContainer(this.name, AES_Encryption.validatePassword());
+	}
+
+	public void removeShare(JSONArray newArray, JSONArray newMapArray) throws IOException {
+		this.pubJSON.remove("fileKeyMappingList");
+		this.privJSON.remove("sharekeys");
+
+		this.pubJSON.put("fileKeyMappingList", newArray);
+		this.pubJSON.put("sharekeys", newMapArray);
+		JSONObject pub2 = new JSONObject();
+		pub2.put("open", this.getPubJSON());
+		pub2.put("secret", this.getPrivJSON());
+		this.fullJSON = pub2;
+		this.saveContainer(this.name, AES_Encryption.validatePassword());
+
+	}
+
+	public void addDeletedBulkForAll(String filename) throws IOException {
+
+		String shareUserList = this.getPrivJSON().get("shareUserList").toString();
+		// [{"file":"test1","cname":"bera2021_11_24_4c307a812539d794d8178fa00f8c2133878f31a6db862fba21f5d385ed66bd36fcbea42055b4678fed344e2359135d6f4385eb69b5f490747e0a4b5c9860379d","user":"bera"},{"file":"test1","cname":"sandra2021_11_24_3fa2ec7d18891e93cd1ac5af528f129e9d5a0752213ea30aaafcb36d8bbc6ef7cba88077dfc7de9428d225733a891a465ca4b792d8200126b21fd11c76d6294c","user":"sandra"}]
+		JSONArray jatmp = new JSONArray(shareUserList);
+		for (int i = 0; i < jatmp.length(); i++) {
+			JSONObject jo = jatmp.getJSONObject(i);
+			if (filename.equals(jo.get("file").toString())) {
+				String container = new String(Files.readAllBytes(Paths.get(jo.get("cname").toString())), StandardCharsets.UTF_8);
+				JSONObject containerJSON = new JSONObject(container);
+				JSONObject bulkObj = new JSONObject();
+				bulkObj.put("id", 3);
+				bulkObj.put("data",filename );
+				bulkObj.put("cname", jo.get("cname"));
+				this.addBulk(bulkObj, containerJSON);
+
+			}
+
+		}
 
 	}
 

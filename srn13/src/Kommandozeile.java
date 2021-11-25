@@ -10,7 +10,6 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
-import java.util.List;
 import java.util.Scanner;
 
 import javax.crypto.BadPaddingException;
@@ -47,12 +46,17 @@ public class Kommandozeile {
 			selected = login();
 		}
 		// Nun haben wir einen Container selektiert
-		verarbeiteBulk(selected);
+
 		boolean weiter = true;
+
+		if (selected != null) {
+			verarbeiteBulk(selected);
+		}
+
 		while (weiter && selected != null) {
 
 			System.out.println("Optionen");
-			System.out.println("1.Add File / 2. Open File / 3.Delete File / 4. File Share / 5. Exit ");
+			System.out.println("1.Add File / 2. Open File / 3.Delete File / 4. File Share / 5. Exit / 6.Remove Share ");
 			number = sc.nextLine();
 			switch (number) {
 			case "1": {
@@ -84,6 +88,11 @@ public class Kommandozeile {
 				selected = null;
 				break;
 			}
+			case "6": {
+				removeFileShare(selected);
+
+				break;
+			}
 			default:
 				System.out.println("Ungueltige Eingabe!" + "\n" + "Bitte waehlen Sie einge gueltige Option");
 				;
@@ -93,76 +102,109 @@ public class Kommandozeile {
 
 	}
 
-	// TODO Wenn aktuell ein falsches Password eines Nutzers eingegeben wird kackt
-	// die Entschluesselung ab
+	private static void removeFileShare(Container selected) throws IOException {
+		System.out.println("Wer soll entfernt werden?(Nummer)");
+		String shareUserList = selected.getPrivJSON().get("shareUserList").toString();
+		JSONArray jatmp = new JSONArray(shareUserList);
+		for (int i = 0; i < jatmp.length(); i++) {
+			JSONObject jotmp = jatmp.getJSONObject(i);
+			System.out.println(jotmp);
+			System.out.println(i + 1 + "-" + jotmp.get("file") + ":" + jotmp.get("user"));
+
+		}
+		Scanner sc = new Scanner(System.in);
+		int number = sc.nextInt();
+
+		if (number > jatmp.length()) {
+			System.out.println("naja");
+		} else {
+			JSONObject tmp = (JSONObject) jatmp.get(number - 1);
+
+			System.out.println(tmp);
+			JSONObject bulkObj = new JSONObject();
+			bulkObj.put("id", 2);
+			bulkObj.put("data", tmp.get("file"));
+			bulkObj.put("fileName", tmp.get("cname"));
+			bulkObj.put("sender", selected.getOwner());
+			String container = new String(Files.readAllBytes(Paths.get(tmp.get("cname").toString())), StandardCharsets.UTF_8);
+			JSONObject containerJSON = new JSONObject(container);
+			selected.addBulk(bulkObj, containerJSON);
+
+		}
+	}
+
 	private static Container login() throws IOException {
 
 		Container c1 = null;
 		Scanner sc = new Scanner(System.in);
 		String user = "";
-		while (c1 == null) {
-			System.out.println("Bitte Username eingeben" + "\n" + "('exit' f�r verlassen)");
+		System.out.println("Bitte Username eingeben" + "\n" + "('exit' f�r verlassen)");
 
-			user = sc.nextLine();
-			if (user.equalsIgnoreCase("exit")) {
-				return null;
-			}
-
-			String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
-			JSONObject settingJSON = new JSONObject(settingFile);
-			JSONArray ja = new JSONArray(settingJSON.get("users").toString());
-
-			if (!(ja.toString().contains(user))) {
-				System.out.println("User nicht vorhanden ");
-
-			} else {
-				String selectedUser = "";
-				String containerName = "";
-				for (int i = 0; i < ja.length(); i++) {
-					selectedUser = ja.getJSONObject(i).toString();
-					String newString = selectedUser.replace("{", "").replace("}", "").replaceAll("\"", "");
-					String[] splittedSettings = newString.split(":");
-					if (user.equals(splittedSettings[0])) {
-						selectedUser = splittedSettings[0];
-						containerName = splittedSettings[1];
-						break;
-					}
-
-				}
-				String container = new String(Files.readAllBytes(Paths.get(containerName)), StandardCharsets.UTF_8);
-				JSONObject containerJSON = new JSONObject(container);
-				String secret = containerJSON.get("secret").toString();
-
-				System.out.println(secret);
-
-				String finalPassword = AES_Encryption.validatePassword();
-				// Hier m�sste �berprueft werden ob das PW zum User passt oder statt die
-				// Exception zu werfen abfangen und wieder zur Eingabe zur�ck springen
-
-				SecretKey aesKey = new SecretKeySpec(finalPassword.getBytes(), "AES");
-
-				String jsonString = "";
-				try {
-					jsonString = AES_Encryption.decrypt(secret, aesKey);
-					JSONObject secretJSON = new JSONObject(jsonString);
-					JSONObject pubJSON = new JSONObject(containerJSON.get("open").toString());
-
-					c1 = new Container(secretJSON, pubJSON, user);
-				} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
-						| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException e) {
-
-					// e.printStackTrace();
-					System.out.println("Falsches Passwort f�r hinterlegten Nutzer!");
-				}
-				// newContainer.put("secret", containerJSON.get("open"));
-
-			}
+		user = sc.nextLine();
+		if (user.equalsIgnoreCase("exit") || user.equals("")) {
+			return null;
 		}
+
+		String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
+		JSONObject settingJSON = new JSONObject(settingFile);
+		JSONArray ja = new JSONArray(settingJSON.get("users").toString());
+
+		if (!(ja.toString().contains(user))) {
+			System.out.println("User nicht vorhanden ");
+
+		} else {
+			String selectedUser = "";
+			String containerName = "";
+			for (int i = 0; i < ja.length(); i++) {
+				selectedUser = ja.getJSONObject(i).toString();
+				String newString = selectedUser.replace("{", "").replace("}", "").replaceAll("\"", "");
+				String[] splittedSettings = newString.split(":");
+				if (user.equals(splittedSettings[0])) {
+					selectedUser = splittedSettings[0];
+					containerName = splittedSettings[1];
+					break;
+				}
+
+			}
+			String container = new String(Files.readAllBytes(Paths.get(containerName)), StandardCharsets.UTF_8);
+			JSONObject containerJSON = new JSONObject(container);
+			String secret = containerJSON.get("secret").toString();
+
+			System.out.println(secret);
+
+			String finalPassword = AES_Encryption.validatePassword();
+			// Passwortabfrage
+			if (!AES_Encryption.verifyPassword(finalPassword)) {
+				return null;
+			} else {
+				System.out.println("Login erfolgreich!");
+			}
+
+			SecretKey aesKey = new SecretKeySpec(finalPassword.getBytes(), "AES");
+
+			String jsonString = "";
+			try {
+				jsonString = AES_Encryption.decrypt(secret, aesKey);
+				JSONObject secretJSON = new JSONObject(jsonString);
+				JSONObject pubJSON = new JSONObject(containerJSON.get("open").toString());
+
+				c1 = new Container(secretJSON, pubJSON, user);
+			} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
+					| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException e) {
+
+				// e.printStackTrace();
+				System.out.println("Falsches Passwort fuer hinterlegten Nutzer!");
+			}
+
+		}
+
 		return c1;
 	}
 
 	private static void verarbeiteBulk(Container selected) throws InvalidKeyException, NoSuchPaddingException,
 			NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, IOException {
+		// TODO Pr�fen ob Datei schon vorhanden ist
+
 		String test = selected.getPubJSON().get("bulk").toString();
 		JSONArray ja = new JSONArray(test);
 		for (int i = 0; i < ja.length(); i++) {
@@ -182,13 +224,16 @@ public class Kommandozeile {
 
 				// key in shared keys speichern
 				String sharedKeysAsString = selected.getPrivJSON().get("sharekeys").toString();
+
 				JSONArray sharedKeysAsStringArray = new JSONArray(sharedKeysAsString);
 				String keey = Base64.getEncoder().encodeToString(symkey.getEncoded());
 
 				JSONObject oldPrivJSON = selected.getPrivJSON();
 				oldPrivJSON.remove("sharekeys");
 				JSONObject jof = new JSONObject();
-				jof.put("keyName",  "SH-key1-" + filename );
+
+				jof.put("keyName", "SH-key1-" + filename);
+
 				jof.put("key", keey);
 				sharedKeysAsStringArray.put(jof);
 				oldPrivJSON.put("sharekeys", sharedKeysAsStringArray);
@@ -205,9 +250,87 @@ public class Kommandozeile {
 				oldPubJSON.put("fileKeyMappingList", fileyKeyListArray);
 				selected.addShareKey(oldPrivJSON, oldPubJSON);
 
+			}else if (jo.get("id").toString().equals("2")) {
+				//removeFIleShare
+
+				//remove sharefiles in private
+				JSONObject tmp = selected.getPrivJSON();
+				
+				String sharekeys = tmp.get("sharekeys").toString();
+				JSONArray sharekeyArry = new JSONArray(sharekeys);
+				JSONArray newArray = new JSONArray();
+				for (int j = 0; j < sharekeyArry.length(); j++) {
+					System.out.println(sharekeyArry);
+					String keyName = sharekeyArry.getJSONObject(i).get("keyName").toString().split("-")[2];
+					if(keyName.equals(jo.get("data"))) {
+						System.out.println("einmal muss es kommen");
+					}else {
+						newArray.put(jo);
+						
+						
+					}
+				}
+				
+				
+				//remove filekeyMappingList
+				JSONObject tmp2 = selected.getPubJSON();
+//				JSONObject bulkObj = new JSONObject();
+//				bulkObj.put("id", 2);
+//				bulkObj.put("data", tmp.get("file"));
+//				bulkObj.put("fileName", tmp.get("cname"));
+//				bulkObj.put("sender", selected.getOwner());
+				String maplist = tmp2.get("fileKeyMappingList").toString();
+				JSONArray mapArray = new JSONArray(maplist);
+				JSONArray newMapArray = new JSONArray();
+				for (int j = 0; j < mapArray.length(); j++) {
+					String tmpString = mapArray.get(i).toString().split(":")[1].split("-")[1];
+					if(tmpString.equals(jo.get("data"))) {
+					
+					}else {
+						newMapArray.put(mapArray.get(i));
+					}
+				}
+				selected.removeShare(newArray,newMapArray);
+			}else if (jo.get("id").toString().equals("3")) {
+				//removeFIleShare
+
+				//remove sharefiles in private
+				JSONObject tmp = selected.getPrivJSON();
+				
+				String sharekeys = tmp.get("sharekeys").toString();
+				JSONArray sharekeyArry = new JSONArray(sharekeys);
+				JSONArray newArray = new JSONArray();
+				for (int j = 0; j < sharekeyArry.length(); j++) {
+					System.out.println(sharekeyArry);
+					String keyName = sharekeyArry.getJSONObject(i).get("keyName").toString().split("-")[2];
+					if(keyName.equals(jo.get("data"))) {
+						System.out.println("einmal muss es kommen");
+					}else {
+						newArray.put(jo);
+						
+						
+					}
+				}
+				
+				
+				//remove filekeyMappingList
+				JSONObject tmp2 = selected.getPubJSON();
+
+				String maplist = tmp2.get("fileKeyMappingList").toString();
+				JSONArray mapArray = new JSONArray(maplist);
+				JSONArray newMapArray = new JSONArray();
+				for (int j = 0; j < mapArray.length(); j++) {
+					
+					String tmpString = mapArray.get(i).toString().split(":")[0];
+					if(tmpString.equals(jo.get("data"))) {
+					
+					}else {
+						newMapArray.put(mapArray.get(i));
+					}
+				}
+				selected.removeShare(newArray,newMapArray);
 			}
 		}
-		// TODO Muss wieder einkommentiert werden
 
 		selected.getPubJSON().remove("bulk");
 		selected.getPubJSON().put("bulk", "[]");
@@ -253,6 +376,7 @@ public class Kommandozeile {
 			System.out.println("User nicht vorhanden ");
 
 		} else {
+
 			String selectedUser = "";
 			String containerName = "";
 			for (int i = 0; i < ja.length(); i++) {
@@ -262,10 +386,24 @@ public class Kommandozeile {
 				if (user.equals(splittedSettings[0])) {
 					selectedUser = splittedSettings[0];
 					containerName = splittedSettings[1];
+					// User und file in sharedFileList reinmachen
+
 					break;
 				}
 
 			}
+			JSONObject jouserandFile = new JSONObject();
+			jouserandFile.put("user", user);
+			jouserandFile.put("file", filename);
+			jouserandFile.put("cname", containerName);
+
+			JSONObject privForShareList = selected.getPrivJSON();
+
+			System.out.println(privForShareList);
+			String tmp = privForShareList.get("shareUserList").toString();
+			JSONArray jatmp = new JSONArray(tmp);
+			jatmp.put(jouserandFile);
+
 			String container = new String(Files.readAllBytes(Paths.get(containerName)), StandardCharsets.UTF_8);
 			JSONObject containerJSON = new JSONObject(container);
 			JSONObject open = (JSONObject) containerJSON.get("open");
@@ -311,8 +449,11 @@ public class Kommandozeile {
 			bulkObj.put("sender", selected.getOwner());
 			System.out.println(open);
 
+			// Bulk hinzufügen
 			selected.addBulk(bulkObj, containerJSON);
-
+			// Container Speichern
+			selected.addShareUserList(jatmp);
+			System.out.println(selected.getPrivJSON());
 		}
 	}
 
@@ -327,35 +468,39 @@ public class Kommandozeile {
 			}
 			// System.out.println(i+1+":"+ja.get(i));
 		}
-		System.out.println("Welche File soll geloescht werden?" + "\n" + "('exit' f�r verlassen)");
+		System.out.println("Welche File soll geloescht werden?" + "\n" + "('exit' fuer verlassen)");
 		Scanner so = new Scanner(System.in);
 		String filename = so.nextLine();
 		boolean match = false;
-		// erneute Pr�fung ob ich berechtigt bin diese Datei zu l�schen
+		// erneute Pruefung ob ich berechtigt bin diese Datei zu loeschen
 		for (int i = 0; i < ja.length(); i++) {
 			String file = ja.get(i).toString().split(":")[0];
-			if (file.equals(filename)) {
+			String autor = ja.get(i).toString().split(":")[2];
+			if (file.equals(filename) && autor.equals(selected.getOwner())) {
 				System.out.println("Hit");
 				match = true;
+			}
+		}
 
-				// key löschen
-				selected.deletekeys(filename);
-				File datei = new File("filesencrypt/" + filename);
+		// TODO Zweitnutzer darf keine Files des Hauptnutzers l�schen d�rfen
 
-				if (datei.delete()) {
-					System.out.println("File deleted successfully");
-				} else {
-					System.out.println("Failed to delete the file");
-				}
+		// key löschen
+		// PW Abfrage in Container Klasse
+		if (selected.deletekeys(filename) && match) {
+			File datei = new File("filesencrypt/" + filename);
+
+			if (datei.delete()) {
+				System.out.println("File deleted successfully");
+				selected.addDeletedBulkForAll(filename);
+			} else {
+				System.out.println("File could not be deleted but Reference is delete");
 			}
 
-		}
-		if (!match) {
+		} else {
 			System.out.println("Sie k�nnen diese Datei nicht l�schen!");
 		}
 
 		// sendbulktoother
-
 	}
 
 	private static void showOwnfile(Container selected) {
@@ -379,35 +524,45 @@ public class Kommandozeile {
 		// waehle file aus
 		// hole key aus Container
 		// entpacke file
-		showAvailableFiles(selected);
+
+		if (!showAvailableFiles(selected)) {
+			return;
+		}
+
 		// TODO:ich brauche wieder den Symmetischen Key fuer die dazugehoerige Datei
-		System.out.println("Welches Datei soll entschluesselt werden?" + "\n" + "('exit' f�r verlassen)");
+		System.out.println("Welches Datei soll entschluesselt werden?" + "\n" + "('exit' fuer verlassen)");
 		Scanner so = new Scanner(System.in);
 		String filename = so.nextLine();
 		if (filename.equalsIgnoreCase("exit")) {
 			return;
 		}
+		// //Passwort Abfrage
+		String pw = AES_Encryption.validatePassword();
+		if (!AES_Encryption.verifyPassword(pw)) {
+			return;
+		} else {
 
-		SecretKey symkey = null;
-		try {
-			symkey = selected.getKeyFromName(filename);
-			File inputFile = new File("filesencrypt/" + filename);
-
-			File decFile = new File("filesdec/" + filename);
-
+			SecretKey symkey = null;
 			try {
-				AES_Encryption.decryptFile(symkey, inputFile, decFile);
-			} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
-					| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
-					| IOException e) {
-				System.err.println(e.getMessage());
-				e.printStackTrace();
+				symkey = selected.getKeyFromName(filename);
+				File inputFile = new File("filesencrypt/" + filename);
 
+				File decFile = new File("filesdec/" + filename);
+
+				try {
+					AES_Encryption.decryptFile(symkey, inputFile, decFile);
+				} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
+						| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
+						| IOException e) {
+					System.err.println(e.getMessage());
+					e.printStackTrace();
+
+				}
+				System.out.println("Datei wurde entschl�sselt !");
+			} catch (IllegalArgumentException e) {
+				System.out.println("Angegebene Datei konnte nicht entschluesselt werden!");
+				openFile(selected);
 			}
-			System.out.println("Datei wurde entschl�sselt !");
-		} catch (IllegalArgumentException e) {
-			System.out.println("Angegebene Datei konnte nicht entschluesselt werden!");
-			openFile(selected);
 		}
 
 	}
@@ -415,7 +570,7 @@ public class Kommandozeile {
 	private static void addFile(Container container) throws IOException
 
 	{
-		System.out.println("Wie soll die Datei hei�en?" + "\n" + "('exit' f�r verlassen)");
+		System.out.println("Wie soll die Datei heissen?" + "\n" + "('exit' fuer verlassen)");
 		Scanner sc = new Scanner(System.in);
 		String filename = sc.nextLine();
 		System.out.println("Name der Datei");
@@ -432,6 +587,12 @@ public class Kommandozeile {
 		// container.setFileKey();
 		// Er wird in das JSON Key gespeichert
 		SecretKey symKey = null;
+		File inputFile = new File("filesupload/" + filepath);
+		File encryptedFile = new File("filesencrypt/" + filename);
+		if (!inputFile.isFile()) {
+			System.out.println("File konnte nicht gefunden werden!");
+			return;
+		}
 		try {
 
 			// TODO Symmetischer Key muss gespeichert werden
@@ -442,9 +603,11 @@ public class Kommandozeile {
 			e.printStackTrace();
 		}
 
-		File inputFile = new File("filesupload/" + filepath);
-		File encryptedFile = new File("filesencrypt/" + filename);
-
+		// Gibt true zur�ck ob Passwort Korrekt war, wenn korrekt dann verschl�ssle
+		// ansonsten breche ab
+		if (!container.addFileKey(symKey, filename)) {
+			return;
+		}
 		// File inputFile = Paths.get(filepath).toFile();
 		// System.out.println(inputFile);
 		// TODO realtiver Pfad
@@ -457,25 +620,33 @@ public class Kommandozeile {
 		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
 				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
 				| IOException e) {
-			System.out.println("Datei konnte nicht gefunden werden!" + "\n" + "Bitte erneut eingeben");
+			System.out.println("Datei konnte nicht gefunden werden!" + "\n" + "Referenz muss wieder gel�scht werden!");
+			// TODO Methode nochmal ohne Passwort oder nicht ?
+			while (!container.deletekeys(filename))
+				;
 			return;
 
 		}
-		container.addFileKey(symKey, filename);
 
 	}
 
-	private static void showAvailableFiles(Container selected) {
+	private static boolean showAvailableFiles(Container selected) {
 		// Zeig alle verfügbaren Files an auf die der User zugreifen darf
 		// selbst erstellte Files und share Files sind gekennzeichnet
-		JSONArray ja = (JSONArray) selected.getPubJSON().get("fileKeyMappingList");
+		JSONArray ja;
+		try {
+			ja = (JSONArray) selected.getPubJSON().get("fileKeyMappingList");
+		} catch (ClassCastException e) {
+			System.out.println("Keine Files verf�gbar!");
+			return false;
+		}
 		for (int i = 0; i < ja.length(); i++) {
 			String files = ja.get(i).toString();
 			String[] a = files.split(":");
 			System.out.println(a[0]);
 
 		}
-
+		return true;
 	}
 
 	private static Container createUser() throws IOException {
@@ -489,20 +660,33 @@ public class Kommandozeile {
 			return null;
 
 		} else {
-			// Passwort wird initial festgelegt
-			String finalPassword = AES_Encryption.validatePassword();
+			// Passwort wird initial festgelegt und damit der Privte Part der Json
+			// verschl�sselt
+			String typedPassword = AES_Encryption.validatePassword();
+
+			// Salt wird aus Settings File ausgelesen
+			String settingFile = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
+			JSONObject settingJSON = new JSONObject(settingFile);
+			String salt = settingJSON.get("appsalt").toString();
+			// Hashed Passwort, bestehend aus urspr�nglichem Passwort + Salt;
+			String hashedPassword = SHA512.encryptString(typedPassword, salt.getBytes());
+			System.out.println("2: " + hashedPassword);
+
+			// ------------------------------------------------------------------------
 			String settings = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
 			JSONObject userJSON = new JSONObject(settings);
 			JSONArray ja = (JSONArray) userJSON.get("users");
 			SimpleDateFormat date = new SimpleDateFormat("yyyy_MM_dd");
 			String timeStamp = date.format(new Date());
-			String containerName = user + timeStamp;
+			String containerName = user + timeStamp + "_" + hashedPassword; // Anhaengen des hashedPassworts TODO
+																			// Fehlerbei anh�ngen des Hashed PW mit
+																			// Doppelpunkt
 			if (ja.toString().contains("\"" + user + "\":")) {
 				System.out.println("User bereits vorhanden");
 			} else {
 				userJSON.append("users", new JSONObject().put(user, containerName));
 				writeFile(userJSON);
-				selected = new Container(containerName, user, finalPassword);
+				selected = new Container(containerName, user, typedPassword);
 
 			}
 
