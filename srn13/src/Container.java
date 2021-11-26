@@ -45,7 +45,9 @@ public class Container {
 	}
 
 	/**
-	 * If a new User is created, we need a Container to save all required Data. If this Step is Done the Container gets encrypted.
+	 * If a new User is created, we need a Container to save all required Data. If
+	 * this Step is Done the Container gets encrypted.
+	 * 
 	 * @param container
 	 * @param password
 	 * @throws IOException
@@ -95,7 +97,9 @@ public class Container {
 	}
 
 	/**
-	 * If a new User is created all other Users get his Public Key transmitted in Order to recive a Future File Share
+	 * If a new User is created all other Users get his Public Key transmitted in
+	 * Order to recive a Future File Share
+	 * 
 	 * @param pubkey
 	 * @throws IOException
 	 * @throws InvalidKeyException
@@ -121,8 +125,7 @@ public class Container {
 		JSONArray ja = (JSONArray) userJSON.get("users");
 		if (ja.length() > 0) {
 			for (int i = 0; i < ja.length(); i++) {
-				
-				
+
 				String user = ja.get(i).toString().split(":")[0].replaceAll("\"", "").replace("{", "");
 				String cname = ja.get(i).toString().split(":")[0].replaceAll("\"", "").replace("}", "");
 
@@ -150,7 +153,9 @@ public class Container {
 	}
 
 	/**
-	 * If a new File is added we need to append the File and the corresponding Symmetrical Key to the Container of a User
+	 * If a new File is added we need to append the File and the corresponding
+	 * Symmetrical Key to the Container of a User
+	 * 
 	 * @param symKey
 	 * @param filename
 	 * @return
@@ -164,7 +169,7 @@ public class Container {
 			return false;
 		} else {
 			// String in filekeys JSON
-			//System.out.println(this.fullJSON);
+			// System.out.println(this.fullJSON);
 			String keyforjson = Base64.getEncoder().encodeToString(symKey.getEncoded());
 			String filekeystosave = this.getPrivJSON().get("filekeys").toString();
 			JSONArray ja = new JSONArray(filekeystosave);
@@ -183,10 +188,10 @@ public class Container {
 			// Mapping
 
 			String filekeymapping = this.getPubJSON().get("fileKeyMappingList").toString();
-			//System.out.println(filekeymapping);
+			// System.out.println(filekeymapping);
 			JSONArray jaMap = new JSONArray(filekeymapping);
 
-			//System.out.println(jaMap);
+			// System.out.println(jaMap);
 			JSONObject tmppub = this.getPubJSON();
 			String autorkeyfile = filename + ":" + keyname + ":" + this.owner;
 
@@ -199,7 +204,7 @@ public class Container {
 			pub2.put("open", this.getPubJSON());
 			pub2.put("secret", this.getPrivJSON());
 			this.fullJSON = pub2;
-			//System.out.println(this.fullJSON);
+			// System.out.println(this.fullJSON);
 
 			this.saveContainer(this.name, pw);
 			return true;
@@ -228,6 +233,7 @@ public class Container {
 
 	/**
 	 * Returns the Symmetrical Key which matches to the given Filename
+	 * 
 	 * @param filename
 	 * @return
 	 */
@@ -259,10 +265,10 @@ public class Container {
 		for (int i = 0; i < share.length(); i++) {
 			keyarray.put(share.get(i));
 		}
-		
+
 		for (int i = 0; i < keyarray.length(); i++) {
 			JSONObject obj = (JSONObject) keyarray.get(i);
-			//System.out.println(obj);
+			// System.out.println(obj);
 			String test2 = obj.get("keyName").toString();
 
 			if (test2.equals(keyname)) {
@@ -278,7 +284,9 @@ public class Container {
 	}
 
 	/**
-	 * If a File gets removed this Method is required to delete the corresponding Key in the Keychain
+	 * If a File gets removed this Method is required to delete the corresponding
+	 * Key in the Keychain
+	 * 
 	 * @param filename
 	 * @return
 	 * @throws IOException
@@ -308,12 +316,12 @@ public class Container {
 			}
 
 		}
-		//System.out.println(this.getPubJSON());
+		// System.out.println(this.getPubJSON());
 
 		this.getPubJSON().remove("fileKeyMappingList");
-		//System.out.println(this.getPubJSON());
+		// System.out.println(this.getPubJSON());
 		this.getPubJSON().put("fileKeyMappingList", newJA);
-		//System.out.println(this.getPubJSON());
+		// System.out.println(this.getPubJSON());
 
 		// key aus fileskeys
 
@@ -333,23 +341,39 @@ public class Container {
 			}
 
 		}
-		//System.out.println(this.getPrivJSON());
+		// System.out.println(this.getPrivJSON());
 		this.getPrivJSON().remove("filekeys");
-		//System.out.println(this.getPrivJSON());
+		// System.out.println(this.getPrivJSON());
 
 		this.getPrivJSON().put("filekeys", newJAfka);
-		//System.out.println(this.getPrivJSON());
+		// System.out.println(this.getPrivJSON());
 
 		JSONObject pub2 = new JSONObject();
 		pub2.put("open", this.getPubJSON());
 		pub2.put("secret", this.getPrivJSON());
-		//System.out.println(this.getPrivJSON());
+		// System.out.println(this.getPrivJSON());
 		this.fullJSON = pub2;
 
 		this.saveContainer(this.name, pw);
 		return true;
 	}
 
+	/**
+	 * The heart of the share function and communication between users. Each user
+	 * has an array to which each user has access and with the help of the public
+	 * key of the user, information is encrypted which the user decrypts and
+	 * processes as soon as he logs in again.
+	 * 
+	 * @param bulkObj
+	 * @param containerJSON
+	 * @throws IOException
+	 * @throws InvalidKeyException
+	 * @throws BadPaddingException
+	 * @throws IllegalBlockSizeException
+	 * @throws NoSuchPaddingException
+	 * @throws NoSuchAlgorithmException
+	 * @throws InvalidAlgorithmParameterException
+	 */
 	public void addBulk(JSONObject bulkObj, JSONObject containerJSON)
 			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
 			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
@@ -390,14 +414,16 @@ public class Container {
 	}
 
 	/**
-	 * When a File Access is transmitted the Container of the Receiver needs to get modyfied, this Method has to Save the modyfied Container
+	 * When a File Access is transmitted the Container of the Receiver needs to get
+	 * modyfied, this Method has to Save the modyfied Container
+	 * 
 	 * @param containername
 	 * @param container
 	 * @throws IOException
 	 */
 	private void saveContainerByOthers(String containername, JSONObject container) throws IOException {
-		//System.out.println(container);
-		//System.out.println(containername);
+		// System.out.println(container);
+		// System.out.println(containername);
 		FileWriter fw = new FileWriter(containername);
 		fw.write(container.toString());
 		fw.close();
@@ -406,8 +432,11 @@ public class Container {
 	}
 
 	/**
-	 * Every time the Container Content gets modifyed, this Method gets called to save the new Data. This is done by overwriting the old Container with the new encrypted one.
-	 * At no given time a decrypted Container is written to an external File
+	 * Every time the Container Content gets modifyed, this Method gets called to
+	 * save the new Data. This is done by overwriting the old Container with the new
+	 * encrypted one. At no given time a decrypted Container is written to an
+	 * external File
+	 * 
 	 * @param containername
 	 * @param password
 	 * @throws IOException
@@ -435,16 +464,16 @@ public class Container {
 			e.printStackTrace();
 		}
 
-		//System.out.println(this.pubJSON);
+		// System.out.println(this.pubJSON);
 
 		JSONObject newObj = new JSONObject();
 		newObj.put("open", this.pubJSON);
-		//System.out.println(newObj.toString());
+		// System.out.println(newObj.toString());
 		newObj.put("secret", jsonPrivate);
-		//System.out.println(newObj.toString());
+		// System.out.println(newObj.toString());
 		fw.write(newObj.toString());
 		fw.close();
-		//System.out.println("Verschluesselt");
+		// System.out.println("Verschluesselt");
 		/*
 		 * 
 		 * encrypted_private = crypto.encrypt_bytes(self.aes_key,
@@ -455,30 +484,30 @@ public class Container {
 	}
 
 	public void addShareKey(JSONObject oldPrivJSON, JSONObject oldPubJSON) throws IOException {
-		//System.out.println(oldPrivJSON);
-		//System.out.println(oldPubJSON);
+		// System.out.println(oldPrivJSON);
+		// System.out.println(oldPubJSON);
 
 		this.privJSON = oldPrivJSON;
 		this.pubJSON = oldPubJSON;
 		JSONObject pub2 = new JSONObject();
 		pub2.put("open", this.getPubJSON());
 		pub2.put("secret", this.getPrivJSON());
-		//System.out.println(this.getPrivJSON());
+		// System.out.println(this.getPrivJSON());
 		this.fullJSON = pub2;
 
 		String pw = AES_Encryption.validatePassword();
-		while(!AES_Encryption.verifyPassword(pw)) {
-			pw=AES_Encryption.validatePassword();
+		while (!AES_Encryption.verifyPassword(pw)) {
+			pw = AES_Encryption.validatePassword();
 		}
-		
+
 		saveContainer(this.name, pw);
 
 	}
 
 	public void resetBulk() throws IOException {
 		String pw = AES_Encryption.validatePassword();
-		while(!AES_Encryption.verifyPassword(pw)) {
-			pw=AES_Encryption.validatePassword();
+		while (!AES_Encryption.verifyPassword(pw)) {
+			pw = AES_Encryption.validatePassword();
 		}
 		this.saveContainer(name, pw);
 
@@ -492,32 +521,33 @@ public class Container {
 		JSONObject pub2 = new JSONObject();
 		pub2.put("open", this.getPubJSON());
 		pub2.put("secret", this.getPrivJSON());
-		//System.out.println(this.getPrivJSON());
+		// System.out.println(this.getPrivJSON());
 		this.fullJSON = pub2;
 		String pw = AES_Encryption.validatePassword();
-		while(!AES_Encryption.verifyPassword(pw)) {
-			pw=AES_Encryption.validatePassword();
+		while (!AES_Encryption.verifyPassword(pw)) {
+			pw = AES_Encryption.validatePassword();
 		}
-		
+
 		this.saveContainer(this.name, pw);
 	}
+
 //Fehler evtl. hier
 	public void removeShare(JSONArray newArray, JSONArray newMapArray) throws IOException {
 		this.pubJSON.remove("fileKeyMappingList");
 		this.privJSON.remove("sharekeys");
 
 		this.pubJSON.put("fileKeyMappingList", newArray);
-		//this.pubJSON.put("sharekeys", newMapArray);
+		// this.pubJSON.put("sharekeys", newMapArray);
 		this.privJSON.put("sharekeys", newMapArray);
 		JSONObject pub2 = new JSONObject();
 		pub2.put("open", this.getPubJSON());
 		pub2.put("secret", this.getPrivJSON());
 		this.fullJSON = pub2;
 		String pw = AES_Encryption.validatePassword();
-		while(!AES_Encryption.verifyPassword(pw)) {
-			pw=AES_Encryption.validatePassword();
+		while (!AES_Encryption.verifyPassword(pw)) {
+			pw = AES_Encryption.validatePassword();
 		}
-		
+
 		this.saveContainer(this.name, pw);
 		System.out.println("File Share has been revoked");
 	}
@@ -552,12 +582,12 @@ public class Container {
 		JSONObject pub2 = new JSONObject();
 		pub2.put("open", this.getPubJSON());
 		pub2.put("secret", this.getPrivJSON());
-		//System.out.println(this.getPrivJSON());
+		// System.out.println(this.getPrivJSON());
 		this.fullJSON = pub2;
-		
-		String pw = AES_Encryption.validatePassword();	
-		while(!AES_Encryption.verifyPassword(pw)) {
-			pw=AES_Encryption.validatePassword();
+
+		String pw = AES_Encryption.validatePassword();
+		while (!AES_Encryption.verifyPassword(pw)) {
+			pw = AES_Encryption.validatePassword();
 		}
 		this.saveContainer(this.name, pw);
 	}

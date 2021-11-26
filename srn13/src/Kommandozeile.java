@@ -1,4 +1,7 @@
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -7,11 +10,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Scanner;
+import java.util.zip.Deflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -22,12 +30,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class Kommandozeile {
+	public static String NOTARPUBLIC = "";
 
 	public static void main(String[] args)
 			throws IOException, InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException,
 			InvalidAlgorithmParameterException, BadPaddingException, IllegalBlockSizeException {
 		System.out.println("Options");
-
+		notarinit();
 		Scanner sc = new Scanner(System.in);
 		Container selected = null;
 		String number = "";
@@ -104,7 +113,43 @@ public class Kommandozeile {
 	}
 
 	/**
+	 * Creates if not existing a keypair for the notary functionality and saves it
+	 * Very important in the notar folder is the privatekey it should be taken out
+	 * from there
+	 * 
+	 * @throws IOException
+	 */
+	private static void notarinit() throws IOException {
+		// wenn 0 user dann erzeuge private und public für notar
+		// public wird in settings gespeichert
+		// private in notar ordner
+		// falls user gtößer null ist ein public key schon in seetings und kann geladen
+		// werden
+
+		String settings = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
+		JSONObject userJSON = new JSONObject(settings);
+		JSONArray ja = (JSONArray) userJSON.get("users");
+		String checkKey = userJSON.get("notarpub").toString();
+		if (ja.length() > 0 && checkKey.length() > 0) {
+			Kommandozeile.NOTARPUBLIC = checkKey;
+		} else {
+			// Base64.getEncoder().encodeToString(publicAndPrivateKey.getPublic().getEncoded())
+			KeyPair publicAndPrivateKey = RSA_Encryption.KeyGenerator();
+			userJSON.remove("notarpub");
+			userJSON.put("notarpub", Base64.getEncoder().encodeToString(publicAndPrivateKey.getPublic().getEncoded()));
+			writeFile(userJSON);
+			FileWriter fw = new FileWriter("notar/secretAsFuck");
+			fw.write(Base64.getEncoder().encodeToString(publicAndPrivateKey.getPrivate().getEncoded()));
+			fw.close();
+			System.out.println("ANTI 1337");
+
+		}
+
+	}
+
+	/**
 	 * Allows the User to revoke File Access for other Users.
+	 * 
 	 * @param selected
 	 * @throws IOException
 	 * @throws InvalidKeyException
@@ -114,23 +159,24 @@ public class Kommandozeile {
 	 * @throws NoSuchAlgorithmException
 	 * @throws InvalidAlgorithmParameterException
 	 */
-	private static void removeFileShare(Container selected) throws IOException, InvalidKeyException,
-	BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+	private static void removeFileShare(Container selected)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		System.out.println("Who you want to revoke Access to File?(Number)");
 		String shareUserList = selected.getPrivJSON().get("shareUserList").toString();
 		JSONArray jatmp = new JSONArray(shareUserList);
 		for (int i = 0; i < jatmp.length(); i++) {
 			JSONObject jotmp = jatmp.getJSONObject(i);
-			//System.out.println(jotmp);
+			// System.out.println(jotmp);
 			System.out.println(i + 1 + "-" + jotmp.get("file") + ":" + jotmp.get("user"));
 
 		}
 		// Da hatten wir wieder das Problem wenn String eingegeben wird-> Done
 		Scanner sc = new Scanner(System.in);
-		int number=1000; 
+		int number = 1000;
 		try {
-			number= Integer.parseInt(sc.nextLine());
-		}catch(NumberFormatException e){
+			number = Integer.parseInt(sc.nextLine());
+		} catch (NumberFormatException e) {
 			System.out.println("Invalid Input");
 			return;
 		}
@@ -139,7 +185,7 @@ public class Kommandozeile {
 		} else {
 			JSONObject tmp = (JSONObject) jatmp.get(number - 1);
 
-			//System.out.println(tmp);
+			// System.out.println(tmp);
 			JSONObject bulkObj = new JSONObject();
 			bulkObj.put("id", 2);
 			bulkObj.put("data", tmp.get("file"));
@@ -155,8 +201,10 @@ public class Kommandozeile {
 	}
 
 	/**
-	 * This Method allows the User to login to his personal Container which will be returned after successful login 
-	 * @return 
+	 * This Method allows the User to login to his personal Container which will be
+	 * returned after successful login
+	 * 
+	 * @return
 	 * @throws IOException
 	 */
 	private static Container login() throws IOException {
@@ -196,7 +244,7 @@ public class Kommandozeile {
 			JSONObject containerJSON = new JSONObject(container);
 			String secret = containerJSON.get("secret").toString();
 
-			//System.out.println(secret);
+			// System.out.println(secret);
 
 			String finalPassword = AES_Encryption.validatePassword();
 			// Passwortabfrage
@@ -228,8 +276,10 @@ public class Kommandozeile {
 	}
 
 	/**
-	 * Checks if User has been granted new Access to Files owned by other Users but also the other way around.
-	 * If a Owner revokes Access to his File this Method will update the Permission Status at each Login. 
+	 * Checks if User has been granted new Access to Files owned by other Users but
+	 * also the other way around. If a Owner revokes Access to his File this Method
+	 * will update the Permission Status at each Login.
+	 * 
 	 * @param selected
 	 * @throws InvalidKeyException
 	 * @throws NoSuchPaddingException
@@ -239,41 +289,40 @@ public class Kommandozeile {
 	 * @throws IOException
 	 * @throws InvalidAlgorithmParameterException
 	 */
-	private static void verarbeiteBulk(Container selected) throws InvalidKeyException, NoSuchPaddingException,
-	NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, IOException, InvalidAlgorithmParameterException {
+	private static void verarbeiteBulk(Container selected)
+			throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException,
+			IllegalBlockSizeException, IOException, InvalidAlgorithmParameterException {
 		// TODO Pr�fen ob Datei schon vorhanden ist
 
 		String test = selected.getPubJSON().get("bulk").toString();
 		String privasString = selected.getPrivJSON().get("privatekey").toString();
-		//System.out.println(privasString);
+		// System.out.println(privasString);
 
 		JSONArray ja = new JSONArray();
 
 		JSONArray jatemp = new JSONArray(test);
 		for (int i = 0; i < jatemp.length(); i++) {
 
-
-			//System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++Entschlüsselung");
+			// System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++Entschlüsselung");
 			JSONObject jotmp = (JSONObject) jatemp.get(i);
 			String stringtoDecr = jotmp.get("encr").toString();
-			//System.out.println("Verschlüsselter Bulk"+stringtoDecr);
+			// System.out.println("Verschlüsselter Bulk"+stringtoDecr);
 			String encSimKey = jotmp.get("encsymkey").toString();
-			//System.out.println("Verschlüsselter Sym Key"+encSimKey);
+			// System.out.println("Verschlüsselter Sym Key"+encSimKey);
 			String decryptSymKEy = RSA_Encryption.decryptToString(Base64.getDecoder().decode(encSimKey), privasString);
-			//System.out.println("Entschlüsstler Sym KEy "+decryptSymKEy);
+			// System.out.println("Entschlüsstler Sym KEy "+decryptSymKEy);
 			byte[] byteString = Base64.getDecoder().decode(stringtoDecr);
-			//datasym stringtoDecr
-			//decryptsym key 
+			// datasym stringtoDecr
+			// decryptsym key
 			byte[] decodedKey = Base64.getDecoder().decode(decryptSymKEy);
 			// rebuild key using SecretKeySpec
-			SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES"); 
-			String decData = AES_Encryption.decrypt(stringtoDecr,originalKey);
-			//System.out.println(decData);
+			SecretKey originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
+			String decData = AES_Encryption.decrypt(stringtoDecr, originalKey);
+			// System.out.println(decData);
 			JSONObject jodec = new JSONObject(decData);
 			ja.put(jodec);
 
 		}
-
 
 		for (int i = 0; i < ja.length(); i++) {
 
@@ -293,7 +342,7 @@ public class Kommandozeile {
 				// aus Key String sym key entschlüsseln
 				// private Key holen
 				String privkey = selected.getPrivJSON().get("privatekey").toString();
-				//System.out.println(privkey);
+				// System.out.println(privkey);
 				byte[] decodedKey = Base64.getDecoder().decode(keyString);
 
 				SecretKey symkey = RSA_Encryption.decrypt(decodedKey, privkey);
@@ -335,7 +384,7 @@ public class Kommandozeile {
 				JSONArray sharekeyArry = new JSONArray(sharekeys);
 				JSONArray newArray = new JSONArray();
 				for (int j = 0; j < sharekeyArry.length(); j++) {
-					//System.out.println(sharekeyArry);
+					// System.out.println(sharekeyArry);
 					String keyName = sharekeyArry.getJSONObject(i).get("keyName").toString().split("-")[2];
 					if (keyName.equals(jo.get("data"))) {
 						System.out.println("One Access to File got revoked");
@@ -361,7 +410,8 @@ public class Kommandozeile {
 			} else if (jo.get("id").toString().equals("3")) {
 				// removeFIleShare
 
-				// remove sharefiles in private-> f�hrt dazu dass komplettes sharfile gel�scht wird statt geleert->Done
+				// remove sharefiles in private-> f�hrt dazu dass komplettes sharfile gel�scht
+				// wird statt geleert->Done
 				JSONObject tmp = selected.getPrivJSON();
 
 				String sharekeys = tmp.get("sharekeys").toString();
@@ -422,7 +472,10 @@ public class Kommandozeile {
 	}
 
 	/**
-	 * Allows a File to be shared with a another User by giving him Access. Therefore the Symmetrical Key has to be transmitted in a safe way to the other Users Container.
+	 * Allows a File to be shared with a another User by giving him Access.
+	 * Therefore the Symmetrical Key has to be transmitted in a safe way to the
+	 * other Users Container.
+	 * 
 	 * @param selected
 	 * @throws IOException
 	 * @throws InvalidKeyException
@@ -432,16 +485,16 @@ public class Kommandozeile {
 	 * @throws NoSuchAlgorithmException
 	 * @throws InvalidAlgorithmParameterException
 	 */
-	private static void fileShare(Container selected) throws IOException, InvalidKeyException, BadPaddingException,
-	IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+	private static void fileShare(Container selected)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 
 		try {
 			showOwnfile(selected);
-		}catch(ClassCastException e) {
+		} catch (ClassCastException e) {
 			System.out.println("No Files available to share");
 			return;
 		}
-
 
 		System.out.println("Which File should be shared?" + "\n" + "('exit' to escape)");
 		Scanner so = new Scanner(System.in);
@@ -451,7 +504,7 @@ public class Kommandozeile {
 		JSONObject userJSON = new JSONObject(settings);
 		JSONArray ja = (JSONArray) userJSON.get("users");
 		for (int i = 0; i < ja.length(); i++) {
-			if(!ja.get(i).toString().contains(selected.getOwner())) {
+			if (!ja.get(i).toString().contains(selected.getOwner())) {
 				System.out.println(ja.get(i).toString().split(":")[0].replaceAll("\"", "").replace("{", ""));
 			}
 		}
@@ -479,7 +532,7 @@ public class Kommandozeile {
 		if (!(ja.toString().contains(user))) {
 			System.out.println("User does not exist");
 
-		}else if(user.equals(selected.getOwner())) {
+		} else if (user.equals(selected.getOwner())) {
 			System.out.println("You can not share a File with yourself, but nice try mate ");
 		} else {
 
@@ -505,19 +558,18 @@ public class Kommandozeile {
 
 			JSONObject privForShareList = selected.getPrivJSON();
 
-			//System.out.println(privForShareList);
+			// System.out.println(privForShareList);
 			String tmp = privForShareList.get("shareUserList").toString();
 			JSONArray jatmp = new JSONArray(tmp);
 			jatmp.put(jouserandFile);
 
-			String container=""; 
+			String container = "";
 			try {
-				container= new String(Files.readAllBytes(Paths.get(containerName)), StandardCharsets.UTF_8);
-			}catch( AccessDeniedException e){
+				container = new String(Files.readAllBytes(Paths.get(containerName)), StandardCharsets.UTF_8);
+			} catch (AccessDeniedException e) {
 				System.out.println("Invalid Input");
 				return;
 			}
-
 
 			JSONObject containerJSON = new JSONObject(container);
 			JSONObject open = (JSONObject) containerJSON.get("open");
@@ -536,21 +588,21 @@ public class Kommandozeile {
 				}
 			}
 			String sym = "";
-			JSONArray files =null; 
-					try {
-						files =(JSONArray) selected.getPrivJSON().get("filekeys");
-					}catch(ClassCastException e) {
-						System.out.println("There is no File you could share");
-						return;
-					}
-				
-			//System.out.println(files);
+			JSONArray files = null;
+			try {
+				files = (JSONArray) selected.getPrivJSON().get("filekeys");
+			} catch (ClassCastException e) {
+				System.out.println("There is no File you could share");
+				return;
+			}
+
+			// System.out.println(files);
 			for (int i = 0; i < files.length(); i++) {
 				JSONObject jo = (JSONObject) files.get(i);
 				if (contSym.equals(jo.get("keyName"))) {
 
 					sym = jo.get("key").toString();
-					//System.out.println(sym);
+					// System.out.println(sym);
 				}
 
 			}
@@ -558,10 +610,10 @@ public class Kommandozeile {
 			byte[] decodedKey = Base64.getDecoder().decode(sym);
 			sym = null;
 			// rebuild key using SecretKeySpec
-			SecretKey originalKey=null; 
+			SecretKey originalKey = null;
 			try {
-				originalKey= new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
-			}catch(IllegalArgumentException e){
+				originalKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
+			} catch (IllegalArgumentException e) {
 				System.out.println("There is no File you could share");
 				return;
 			}
@@ -575,23 +627,26 @@ public class Kommandozeile {
 			bulkObj.put("data", keyforjson);
 			bulkObj.put("fileName", filename);
 			bulkObj.put("sender", selected.getOwner());
-			//System.out.println(open);
+			// System.out.println(open);
 
 			// Bulk hinzufügen
 			selected.addBulk(bulkObj, containerJSON);
 			// Container Speichern
 			selected.addShareUserList(jatmp);
-			//System.out.println(selected.getPrivJSON());
+			// System.out.println(selected.getPrivJSON());
 		}
 	}
 
 	/**
-	 * Deletes a existing File in the encrypted Files Destination if the Owner is allowed to do so.
+	 * Deletes a existing File in the encrypted Files Destination if the Owner is
+	 * allowed to do so.
+	 * 
 	 * @param selected
 	 * @throws IOException
 	 */
-	private static void deleteFile(Container selected) throws IOException, InvalidKeyException, BadPaddingException,
-	IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+	private static void deleteFile(Container selected)
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		JSONArray ja = (JSONArray) selected.getPubJSON().get("fileKeyMappingList");
 		for (int i = 0; i < ja.length(); i++) {
 
@@ -635,8 +690,11 @@ public class Kommandozeile {
 
 		// sendbulktoother
 	}
+
 	/**
-	 * Shows all available Files of a User to either decrypt or share with another User
+	 * Shows all available Files of a User to either decrypt or share with another
+	 * User
+	 * 
 	 * @param selected
 	 * @return
 	 */
@@ -656,8 +714,9 @@ public class Kommandozeile {
 	}
 
 	/**
-	 * Opens a chosen File of all available Files of a User.
-	 * In Order to use this Option the User is required to enter his password
+	 * Opens a chosen File of all available Files of a User. In Order to use this
+	 * Option the User is required to enter his password
+	 * 
 	 * @param selected
 	 */
 	private static void openFile(Container selected) {
@@ -701,15 +760,18 @@ public class Kommandozeile {
 
 				}
 				System.out.println("File decoded");
-			} catch (IllegalArgumentException |JSONException |ClassCastException e) {
+			} catch (IllegalArgumentException | JSONException | ClassCastException e) {
 				System.out.println("File could not be decoded");
 
 			}
 		}
 
 	}
+
 	/**
-	 * Adds a File which gets encrypted via an generated Key in AES. This Key an File Reference are added to the Users Container
+	 * Adds a File which gets encrypted via an generated Key in AES. This Key an
+	 * File Reference are added to the Users Container
+	 * 
 	 * @param container
 	 * @throws IOException
 	 */
@@ -764,6 +826,7 @@ public class Kommandozeile {
 
 			AES_Encryption.encryptFile(symKey, inputFile, encryptedFile);
 			inputFile.delete();
+			createNotarFile(symKey, filename);
 		} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
 				| InvalidAlgorithmParameterException | BadPaddingException | IllegalBlockSizeException
 				| IOException e) {
@@ -774,12 +837,64 @@ public class Kommandozeile {
 			return;
 
 		}
+
 		System.out.println("File successfully added");
 	}
 
+	/**
+	 * creates a key for each generated file for the notary in the notary folder
+	 * 
+	 * @param sym key Symkey file to encrypt
+	 * @param the filename
+	 **/
+
+	private static void createNotarFile(SecretKey symKey, String filename) throws IOException, InvalidKeyException,
+			BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {
+		String key = Kommandozeile.NOTARPUBLIC;
+		// lade File
+		File encryptedFile = new File("filesencrypt/" + filename);
+		System.out.println(Kommandozeile.NOTARPUBLIC);
+		// verschlüüsel symkey mit pubkey
+		byte[] encr = RSA_Encryption.encrypt(symKey, key);
+		// byte to string
+		String keyforjson = Base64.getEncoder().encodeToString(encr);
+		// zip symkey string mit file
+		FileWriter keyFile = new FileWriter("notar/" + filename + "Key");
+		keyFile.write(keyforjson);
+		keyFile.close();
+
+	}
+
+//not in use
+	public static void createZip(File zipFileName, File[] selected) {
+		try {
+			byte[] buffer = new byte[1024];
+			ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFileName));
+			out.setLevel(Deflater.DEFAULT_COMPRESSION);
+			for (int i = 0; i < selected.length; i++) {
+				FileInputStream in = new FileInputStream(selected[i]);
+				out.putNextEntry(new ZipEntry(selected[i].getPath()));
+				int len;
+				while ((len = in.read(buffer)) > 0) {
+					out.write(buffer, 0, len);
+				}
+				out.closeEntry();
+				in.close();
+			}
+			out.close();
+		} catch (IllegalArgumentException iae) {
+			iae.printStackTrace();
+		} catch (FileNotFoundException fnfe) {
+			fnfe.printStackTrace();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+	}
 
 	/**
-	 * Shows all available Files to a User which he can access, this includes all own Files aswell as all shared Files from others he can access.
+	 * Shows all available Files to a User which he can access, this includes all
+	 * own Files aswell as all shared Files from others he can access.
+	 * 
 	 * @param selected
 	 * @return
 	 */
@@ -803,12 +918,15 @@ public class Kommandozeile {
 	}
 
 	/**
-	 * Generates a new User and his Container, existing out of a User Name and initial Password
+	 * Generates a new User and his Container, existing out of a User Name and
+	 * initial Password
+	 * 
 	 * @return
 	 * @throws IOException
 	 */
-	private static Container createUser() throws IOException, InvalidKeyException, BadPaddingException,
-	IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+	private static Container createUser()
+			throws IOException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException,
+			NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
 		Container selected = null;
 		System.out.println("Create User");
 		System.out.println("Please enter User Name");
@@ -829,7 +947,7 @@ public class Kommandozeile {
 			String salt = settingJSON.get("appsalt").toString();
 			// Hashed Passwort, bestehend aus urspr�nglichem Passwort + Salt;
 			String hashedPassword = SHA512.encryptString(typedPassword, salt.getBytes());
-			//System.out.println("2: " + hashedPassword);
+			// System.out.println("2: " + hashedPassword);
 
 			// ------------------------------------------------------------------------
 			String settings = new String(Files.readAllBytes(Paths.get("settings.json")), StandardCharsets.UTF_8);
@@ -855,7 +973,8 @@ public class Kommandozeile {
 	}
 
 	/**
-	 * Writes all existing Users to external "Settings.json" File 
+	 * Writes all existing Users to external "Settings.json" File
+	 * 
 	 * @param userJSON
 	 * @throws IOException
 	 */
