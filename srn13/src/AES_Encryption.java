@@ -6,14 +6,8 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.BadPaddingException;
 import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,35 +18,36 @@ import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.Scanner;
 
 public class AES_Encryption {
-
+	
+	/**
+	 * Reads a password from Keyboard, it has to be greater then 0 Characters and smaller then 16 Characters
+	 * @return
+	 */
 	public static String validatePassword() {
 		Scanner sc = new Scanner(System.in);
 		String inputPW = "";
 		String finalPW = "";
 
 		do {
-			System.out.println("Bitte Passwort eingeben"+"\n"+"(Zwischen 1-16 Zeichen)");
+			System.out.println("Please enter your Password"+"\n"+"(Between  1-16 Characters)");
 			inputPW=sc.nextLine(); if(inputPW.length()>0 || inputPW.length() >16) {
 				finalPW=AES_Encryption.extendGivenPassword(inputPW); }
 
 		}while(inputPW.length()==0 || inputPW.length() >=16);
 
-
-		// TODO syos wieder entfernen, nur zum testen
-		System.out.println("Dein gespeichertes Passwort lautet: " + finalPW + "\n"
-				+ "(Kann auf 16 Stellen erweitert worden sein!)" + System.lineSeparator());
 		return finalPW;
 
 	}
 
-
+	/**
+	 * If a given Password does not have the length of 16 Characters this Method will fill the missing Chars with zeros
+	 * @param givenPassword
+	 * @return
+	 */
 	public static String extendGivenPassword(String givenPassword) {
 		int neededLength=16;
 		int charsToExtend=neededLength-givenPassword.length();
@@ -64,6 +59,11 @@ public class AES_Encryption {
 		return extendedPassword;
 
 	}	
+	/**
+	 * Hashes input Password to compare it with hashed Password saved in Containername 
+	 * @param inputPW
+	 * @return
+	 */
 	public static boolean verifyPassword(String inputPW) {
 		//Passwortabfrage
 
@@ -82,7 +82,7 @@ public class AES_Encryption {
 		String passwordToCompare=SHA512.encryptString(inputPW, salt.getBytes());
 		// gehashtes User Passwort mit in Container stehendem Hash vergleichen
 		if(!(users.toString().contains(passwordToCompare))) {
-			System.out.println("Falsches Passwort!");
+			System.out.println("Incorrect Password!");
 			return false;
 		}else {
 			return true;
@@ -198,7 +198,7 @@ public class AES_Encryption {
 	NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException,
 	BadPaddingException, IllegalBlockSizeException {
 		Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-		cipher.init(Cipher.DECRYPT_MODE, key);//iv
+		cipher.init(Cipher.DECRYPT_MODE, key);
 		FileInputStream inputStream = new FileInputStream(encryptedFile);
 		FileOutputStream outputStream = new FileOutputStream(decryptedFile);
 		byte[] buffer = new byte[64];
