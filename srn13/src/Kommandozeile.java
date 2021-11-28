@@ -130,7 +130,7 @@ public class Kommandozeile {
 		JSONObject userJSON = new JSONObject(settings);
 		JSONArray ja = (JSONArray) userJSON.get("users");
 		String checkKey = userJSON.get("notarpub").toString();
-		if (ja.length() > 0 && checkKey.length() > 0) {
+		if (checkKey.length() > 0) {
 			Kommandozeile.NOTARPUBLIC = checkKey;
 		} else {
 			// Base64.getEncoder().encodeToString(publicAndPrivateKey.getPublic().getEncoded())
@@ -853,7 +853,6 @@ public class Kommandozeile {
 		String key = Kommandozeile.NOTARPUBLIC;
 		// lade File
 		File encryptedFile = new File("filesencrypt/" + filename);
-		System.out.println(Kommandozeile.NOTARPUBLIC);
 		// verschlüüsel symkey mit pubkey
 		byte[] encr = RSA_Encryption.encrypt(symKey, key);
 		// byte to string
